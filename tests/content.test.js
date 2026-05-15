@@ -86,6 +86,7 @@ async function bootstrapContentScript(html, initialState, options = {}) {
 
   dom.window.eval(contentSource);
   await new Promise((resolvePromise) => setTimeout(resolvePromise, 0));
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, 0));
 
   return {
     dom,
@@ -105,6 +106,10 @@ describe("content/kufar.js", () => {
     resolve(process.cwd(), "examples", "auto", "index_page.html"),
     "utf8",
   );
+  const itemHtml = readFileSync(
+    resolve(process.cwd(), "examples", "auto", "item_page.html"),
+    "utf8",
+  );
 
   it("converts BYN text on auto.kufar.by", async () => {
     const session = await bootstrapContentScript(indexHtml, {
@@ -117,6 +122,49 @@ describe("content/kufar.js", () => {
       const converted =
         session.dom.window.document.body.textContent.includes("$");
       expect(converted).toBe(true);
+    } finally {
+      session.cleanup();
+    }
+  });
+
+  it("converts item page sidebar and similar listing prices", async () => {
+    const session = await bootstrapContentScript(itemHtml, {
+      ratesData: sampleRates,
+      selectedCurrency: "USD",
+      domainSettings: { "auto.kufar.by": true },
+    });
+
+    try {
+      const sidebarPrice = session.dom.window.document.querySelector(
+        ".styles_main__eFbJH",
+      );
+      expect(sidebarPrice.dataset.kufarOriginalPriceText).toBe("66 057 р.");
+      expect(sidebarPrice.textContent).toContain("$");
+
+      const similarPrices = session.dom.window.document.querySelectorAll(
+        ".styles_price__anAen > span:first-child",
+      );
+      expect(similarPrices.length).toBeGreaterThan(0);
+      expect(similarPrices[0].dataset.kufarOriginalPriceAmount).toBeDefined();
+      expect(similarPrices[0].textContent).toContain("$");
+
+      const sellerBadges = Array.from(
+        session.dom.window.document.querySelectorAll(
+          ".styles_security_badges__aCAPX p",
+        ),
+      );
+      const sellerSince = sellerBadges.find((node) =>
+        node.textContent.includes("На Куфаре с"),
+      );
+      expect(sellerSince.dataset.kufarOriginalPriceText).toBeUndefined();
+
+      const vehicleParams = session.dom.window.document.querySelectorAll(
+        ".styles_params__xAj6w",
+      );
+      expect(vehicleParams.length).toBeGreaterThan(0);
+      for (const params of vehicleParams) {
+        expect(params.dataset.kufarOriginalPriceText).toBeUndefined();
+      }
     } finally {
       session.cleanup();
     }
