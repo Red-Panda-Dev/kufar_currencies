@@ -102,17 +102,19 @@ export function parseBynPrice(value) {
     .replace(/\s+/g, " ")
     .trim();
 
-  if (!/(р\.?|BYN|бел\.\s*руб)/i.test(normalized)) {
+  if (/(^|\s)до\s+\d/i.test(normalized)) {
     return null;
   }
 
   const withoutPrefix = normalized.replace(/^от\s+/i, "");
-  const match = withoutPrefix.match(/\d[\d\s]*([.,]\d+)?/);
+  const match = withoutPrefix.match(
+    /(^|\D)(\d[\d\s]*([.,]\d+)?)\s*(BYN\b|бел\.\s*руб\.?|р\.?(?=\s|$))/i,
+  );
   if (!match) {
     return null;
   }
 
-  const numberValue = match[0].replace(/\s+/g, "").replace(",", ".");
+  const numberValue = match[2].replace(/\s+/g, "").replace(",", ".");
   const parsed = Number.parseFloat(numberValue);
   return Number.isFinite(parsed) ? parsed : null;
 }
