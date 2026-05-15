@@ -1,0 +1,187 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { JSDOM } from "jsdom";
+import { describe, expect, it } from "vitest";
+
+const contentSource = readFileSync(
+  resolve(process.cwd(), "content", "kufar.js"),
+  "utf8",
+);
+
+const sampleRates = {
+  rates: {
+    USD: { rate: 2.8186, scale: 1 },
+    EUR: { rate: 3.2937, scale: 1 },
+    RUB: { rate: 3.7556, scale: 100 },
+  },
+};
+
+function createBrowserMock(initialState, options = {}) {
+  const state = { ...initialState };
+  const listeners = [];
+  const messages = [];
+
+  const browser = {
+    storage: {
+      local: {
+        async get(keys) {
+          if (!Array.isArray(keys)) {
+            return { ...state };
+          }
+          const result = {};
+          for (const key of keys) {
+            result[key] = state[key];
+          }
+          return result;
+        },
+        async set(update) {
+          const changes = {};
+          for (const [key, value] of Object.entries(update)) {
+            changes[key] = { oldValue: state[key], newValue: value };
+            state[key] = value;
+          }
+          for (const listener of listeners) {
+            listener(changes, "local");
+          }
+        },
+      },
+      onChanged: {
+        addListener(listener) {
+          listeners.push(listener);
+        },
+      },
+    },
+    runtime: {
+      async sendMessage(payload) {
+        messages.push(payload);
+        if (options.sendMessage) {
+          return options.sendMessage(payload, state);
+        }
+        return { ok: true, ratesData: state.ratesData || sampleRates };
+      },
+    },
+  };
+
+  return { browser, state, messages };
+}
+
+async function bootstrapContentScript(html, initialState, options = {}) {
+  const dom = new JSDOM(html, {
+    url: options.url || "https://auto.kufar.by/",
+    runScripts: "outside-only",
+  });
+
+  const browserMock = createBrowserMock(initialState, options);
+  const rafTimers = new Set();
+  dom.window.browser = browserMock.browser;
+  dom.window.chrome = browserMock.browser;
+  dom.window.requestAnimationFrame = (cb) => {
+    const timer = setTimeout(() => {
+      rafTimers.delete(timer);
+      cb();
+    }, 0);
+    rafTimers.add(timer);
+    return timer;
+  };
+
+  dom.window.eval(contentSource);
+  await new Promise((resolvePromise) => setTimeout(resolvePromise, 0));
+
+  return {
+    dom,
+    browserMock,
+    cleanup() {
+      for (const timer of rafTimers) {
+        clearTimeout(timer);
+      }
+      rafTimers.clear();
+      dom.window.close();
+    },
+  };
+}
+
+describe("content/kufar.js", () => {
+  const indexHtml = readFileSync(
+    resolve(process.cwd(), "examples", "auto", "index_page.html"),
+    "utf8",
+  );
+
+  it("converts BYN text on auto.kufar.by", async () => {
+    const session = await bootstrapContentScript(indexHtml, {
+      ratesData: sampleRates,
+      selectedCurrency: "USD",
+      domainSettings: { "auto.kufar.by": true },
+    });
+
+    try {
+      const converted =
+        session.dom.window.document.body.textContent.includes("$");
+      expect(converted).toBe(true);
+    } finally {
+      session.cleanup();
+    }
+  });
+
+  it("does not run conversion on unsupported host", async () => {
+    const session = await bootstrapContentScript(
+      indexHtml,
+      {
+        ratesData: sampleRates,
+        selectedCurrency: "USD",
+        domainSettings: { "auto.kufar.by": true },
+      },
+      { url: "https://www.kufar.by/" },
+    );
+
+    try {
+      expect(
+        session.browserMock.messages.some(
+          (msg) => msg.action === "ensureRates",
+        ),
+      ).toBe(false);
+      const tracked = session.dom.window.document.querySelectorAll(
+        "[data-kufar-original-price-text]",
+      );
+      expect(tracked.length).toBe(0);
+    } finally {
+      session.cleanup();
+    }
+  });
+
+  it("requests ensureRates when active and rates missing", async () => {
+    const session = await bootstrapContentScript(indexHtml, {
+      selectedCurrency: "USD",
+      domainSettings: { "auto.kufar.by": true },
+    });
+
+    try {
+      expect(
+        session.browserMock.messages.some(
+          (msg) => msg.action === "ensureRates",
+        ),
+      ).toBe(true);
+    } finally {
+      session.cleanup();
+    }
+  });
+
+  it("restores BYN when selectedCurrency switches to BYN", async () => {
+    const session = await bootstrapContentScript(indexHtml, {
+      ratesData: sampleRates,
+      selectedCurrency: "USD",
+      domainSettings: { "auto.kufar.by": true },
+    });
+
+    try {
+      await session.browserMock.browser.storage.local.set({
+        selectedCurrency: "BYN",
+      });
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 0));
+      expect(session.dom.window.document.body.textContent.includes("р.")).toBe(
+        true,
+      );
+    } finally {
+      session.cleanup();
+    }
+  });
+});

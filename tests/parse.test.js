@@ -1,0 +1,99 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+
+import {
+  CURRENCY_SYMBOLS,
+  DISPLAY_CURRENCIES,
+  convert,
+  convertFromBYN,
+  formatDate,
+  formatDisplayPrice,
+  formatRate,
+  formatRateLabel,
+  formatTime,
+  parseBynPrice,
+  parseRates,
+} from "../lib/rates.js";
+
+const fixture = JSON.parse(
+  readFileSync(
+    resolve(process.cwd(), "examples", "nbrb_response.json"),
+    "utf8",
+  ),
+);
+
+describe("parseRates", () => {
+  it("extracts USD EUR RUB from fixture", () => {
+    const parsed = parseRates(fixture);
+    expect(parsed).not.toBeNull();
+    expect(parsed.rates.USD.code).toBe("USD");
+    expect(parsed.rates.EUR.code).toBe("EUR");
+    expect(parsed.rates.RUB.code).toBe("RUB");
+    expect(parsed.rates.RUB.scale).toBe(100);
+  });
+
+  it("returns null for invalid payload", () => {
+    expect(parseRates(null)).toBeNull();
+    expect(parseRates({})).toBeNull();
+  });
+
+  it("returns null when required rate is missing", () => {
+    const withoutRub = fixture.filter(
+      (item) => item.Cur_Abbreviation !== "RUB",
+    );
+    expect(parseRates(withoutRub)).toBeNull();
+  });
+});
+
+describe("conversion helpers", () => {
+  it("converts currency to BYN with scale", () => {
+    const parsed = parseRates(fixture);
+    const amount = convert(100, parsed.rates.RUB);
+    expect(amount).toBeCloseTo(3.7556, 5);
+  });
+
+  it("converts BYN to currency with scale", () => {
+    const parsed = parseRates(fixture);
+    const amount = convertFromBYN(3.7556, parsed.rates.RUB);
+    expect(amount).toBeCloseTo(100, 5);
+  });
+});
+
+describe("price parsing and formatting", () => {
+  it("parses BYN prices with spaces and decimal separators", () => {
+    expect(parseBynPrice("96 912 р.")).toBe(96912);
+    expect(parseBynPrice("96\u00A0912 р.")).toBe(96912);
+    expect(parseBynPrice("96\u202F912 р.")).toBe(96912);
+    expect(parseBynPrice("от 10,5 BYN")).toBe(10.5);
+    expect(parseBynPrice("10.25 бел. руб")).toBe(10.25);
+  });
+
+  it("returns null for non-BYN strings", () => {
+    expect(parseBynPrice("Цена не указана")).toBeNull();
+    expect(parseBynPrice("$ 100")).toBeNull();
+  });
+
+  it("formats display and rate labels", () => {
+    expect(formatDisplayPrice(1234.5, "USD")).toContain("$");
+    expect(formatRate(2.8186)).toBe("2.8186");
+    expect(formatRateLabel("USD", 1)).toBe("BYN за 1 USD");
+    expect(formatRateLabel("RUB", 100)).toBe("BYN за 100 RUB");
+  });
+
+  it("formats date and time with fallback", () => {
+    expect(formatDate(undefined)).toBe("-");
+    expect(formatTime(undefined)).toBe("-");
+    const timestamp = new Date(2026, 4, 15, 10, 30).getTime();
+    expect(formatDate(timestamp)).toBe("15.05");
+    expect(formatTime(timestamp)).toMatch(/^\d{2}:\d{2}$/);
+  });
+
+  it("keeps display constants complete", () => {
+    expect(DISPLAY_CURRENCIES).toEqual(["BYN", "USD", "EUR", "RUB"]);
+    expect(CURRENCY_SYMBOLS.BYN).toBe("BYN");
+    expect(CURRENCY_SYMBOLS.USD).toBe("$");
+    expect(CURRENCY_SYMBOLS.EUR).toBe("€");
+    expect(CURRENCY_SYMBOLS.RUB).toBe("RUB");
+  });
+});
