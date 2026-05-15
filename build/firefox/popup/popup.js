@@ -22,7 +22,7 @@ const DOMAIN_REGISTRY = [
   },
   {
     host: ALL_DOMAINS_HOST,
-    label: "везде",
+    label: "Везде",
     displayHost: "kufar.by",
     supported: false,
     defaultEnabled: false,
