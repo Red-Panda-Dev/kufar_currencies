@@ -72,6 +72,14 @@ describe("price parsing and formatting", () => {
   it("returns null for non-BYN strings", () => {
     expect(parseBynPrice("Цена не указана")).toBeNull();
     expect(parseBynPrice("$ 100")).toBeNull();
+    expect(parseBynPrice("до 100 000 р. на срок до 7 лет")).toBeNull();
+    expect(parseBynPrice("На Куфаре с мая, 2023")).toBeNull();
+    expect(parseBynPrice("От 2 000 до 17 449 р.")).toBeNull();
+    expect(
+      parseBynPrice(
+        "2007 г., 225 063 км, механика, 2.0 л, бензин, внедорожник",
+      ),
+    ).toBeNull();
   });
 
   it("formats display and rate labels", () => {
