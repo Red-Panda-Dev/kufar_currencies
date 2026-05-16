@@ -106,7 +106,11 @@ export function parseBynPrice(value) {
     return null;
   }
 
-  const withoutPrefix = normalized.replace(/^от\s+/i, "");
+  const prefixMatch = normalized.match(/^(от\s+)/i);
+  const prefix = prefixMatch ? "от " : "";
+  const withoutPrefix = prefixMatch
+    ? normalized.slice(prefixMatch[0].length)
+    : normalized;
   const match = withoutPrefix.match(
     /(^|\D)(\d[\d\s]*([.,]\d+)?)\s*(BYN\b|бел\.\s*руб\.?|[рp]\.?(?=\s|$))/i,
   );
@@ -123,6 +127,10 @@ export function parseBynPrice(value) {
   const matchedEnd = match.index + match[0].length;
   const remainder = withoutPrefix.slice(matchedEnd).trim();
   const unitSuffix = remainder ? ` ${remainder}` : "";
+
+  if (prefix) {
+    return { amount: parsed, unitSuffix, prefix };
+  }
 
   return { amount: parsed, unitSuffix };
 }
