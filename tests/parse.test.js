@@ -83,9 +83,14 @@ describe("price parsing and formatting", () => {
     expect(parseBynPrice("от 10,5 BYN")).toEqual({
       amount: 10.5,
       unitSuffix: "",
+      prefix: "от ",
     });
     expect(parseBynPrice("10.25 бел. руб")).toEqual({
       amount: 10.25,
+      unitSuffix: "",
+    });
+    expect(parseBynPrice("10,5 BYN")).toEqual({
+      amount: 10.5,
       unitSuffix: "",
     });
   });
