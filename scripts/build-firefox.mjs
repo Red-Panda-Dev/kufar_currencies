@@ -2,12 +2,12 @@ import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const rootDir = process.cwd();
-const chromeDir = path.join(rootDir, "build", "chrome");
+const firefoxDir = path.join(rootDir, "build", "firefox");
 const manifestPath = path.join(rootDir, "manifest.json");
 
 async function copyIfExists(relativePath) {
   const source = path.join(rootDir, relativePath);
-  const destination = path.join(chromeDir, relativePath);
+  const destination = path.join(firefoxDir, relativePath);
   try {
     await cp(source, destination, { recursive: true });
   } catch (error) {
@@ -30,43 +30,20 @@ async function removeAgentsFiles(dir) {
   }
 }
 
-async function buildChrome() {
-  await rm(chromeDir, { recursive: true, force: true });
-  await mkdir(chromeDir, { recursive: true });
+async function buildFirefox() {
+  await rm(firefoxDir, { recursive: true, force: true });
+  await mkdir(firefoxDir, { recursive: true });
 
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  delete manifest.browser_specific_settings;
-
-  const backgroundScripts = manifest.background?.scripts;
-  if (Array.isArray(backgroundScripts) && backgroundScripts[0]) {
-    manifest.background = {
-      service_worker: backgroundScripts[0],
-      type: manifest.background.type ?? "module",
-    };
-  }
 
   const copyTargets = ["src", "icons", "examples/nbrb_response.json"];
 
   await Promise.all(copyTargets.map((target) => copyIfExists(target)));
   await writeFile(
-    path.join(chromeDir, "manifest.json"),
+    path.join(firefoxDir, "manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
-  await removeAgentsFiles(chromeDir);
-
-  const chromeInstallNotes = [
-    "Kufar.by Валюты (Chrome build)",
-    "",
-    "1. Open chrome://extensions",
-    "2. Enable Developer mode",
-    "3. Click Load unpacked",
-    "4. Select build/chrome",
-  ].join("\n");
-
-  await writeFile(
-    path.join(chromeDir, "README_CHROME_INSTALL.txt"),
-    `${chromeInstallNotes}\n`,
-  );
+  await removeAgentsFiles(firefoxDir);
 }
 
-buildChrome();
+buildFirefox();
