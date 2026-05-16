@@ -33,14 +33,7 @@ async function buildChrome() {
     };
   }
 
-  const copyTargets = [
-    "background.js",
-    "lib",
-    "content",
-    "popup",
-    "icons",
-    "examples/nbrb_response.json",
-  ];
+  const copyTargets = ["src", "icons", "examples/nbrb_response.json"];
 
   await Promise.all(copyTargets.map((target) => copyIfExists(target)));
   await writeFile(

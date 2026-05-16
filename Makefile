@@ -21,7 +21,7 @@ lint:
 package-firefox:
 	rm -rf $(FIREFOX_BUILD_DIR)
 	mkdir -p $(FIREFOX_BUILD_DIR)/examples
-	cp -r manifest.json background.js lib content popup icons $(FIREFOX_BUILD_DIR)/
+	cp -r manifest.json src icons $(FIREFOX_BUILD_DIR)/
 	cp examples/nbrb_response.json $(FIREFOX_BUILD_DIR)/examples/
 	rm -f $(EXT_NAME)-firefox.zip
 	cd $(FIREFOX_BUILD_DIR) && zip -r ../../$(EXT_NAME)-firefox.zip .
