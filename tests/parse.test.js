@@ -62,11 +62,26 @@ describe("conversion helpers", () => {
 
 describe("price parsing and formatting", () => {
   it("parses BYN prices with spaces and decimal separators", () => {
-    expect(parseBynPrice("96 912 р.")).toBe(96912);
-    expect(parseBynPrice("96\u00A0912 р.")).toBe(96912);
-    expect(parseBynPrice("96\u202F912 р.")).toBe(96912);
-    expect(parseBynPrice("от 10,5 BYN")).toBe(10.5);
-    expect(parseBynPrice("10.25 бел. руб")).toBe(10.25);
+    expect(parseBynPrice("96 912 р.")).toEqual({
+      amount: 96912,
+      unitSuffix: "",
+    });
+    expect(parseBynPrice("96\u00A0912 р.")).toEqual({
+      amount: 96912,
+      unitSuffix: "",
+    });
+    expect(parseBynPrice("96\u202F912 р.")).toEqual({
+      amount: 96912,
+      unitSuffix: "",
+    });
+    expect(parseBynPrice("от 10,5 BYN")).toEqual({
+      amount: 10.5,
+      unitSuffix: "",
+    });
+    expect(parseBynPrice("10.25 бел. руб")).toEqual({
+      amount: 10.25,
+      unitSuffix: "",
+    });
   });
 
   it("returns null for non-BYN strings", () => {
@@ -80,6 +95,32 @@ describe("price parsing and formatting", () => {
         "2007 г., 225 063 км, механика, 2.0 л, бензин, внедорожник",
       ),
     ).toBeNull();
+  });
+
+  it("extracts unit suffixes from per-unit prices", () => {
+    expect(parseBynPrice("1 246 р. / мес.")).toEqual({
+      amount: 1246,
+      unitSuffix: " / мес.",
+    });
+    expect(parseBynPrice("6 096.86 р. / м²")).toEqual({
+      amount: 6096.86,
+      unitSuffix: " / м²",
+    });
+    expect(parseBynPrice("1 136 р. / мес.")).toEqual({
+      amount: 1136,
+      unitSuffix: " / мес.",
+    });
+  });
+
+  it("parses prices with Latin p as BYN marker", () => {
+    expect(parseBynPrice("6 096.86 p. / м²")).toEqual({
+      amount: 6096.86,
+      unitSuffix: " / м²",
+    });
+    expect(parseBynPrice("214 000 p.")).toEqual({
+      amount: 214000,
+      unitSuffix: "",
+    });
   });
 
   it("formats display and rate labels", () => {
