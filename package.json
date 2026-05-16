@@ -4,7 +4,10 @@
   "scripts": {
     "test": "vitest run --coverage",
     "format": "prettier --write 'src/lib/**/*.js' 'src/content/**/*.js' 'src/background.js' 'src/popup/**/*.js' 'scripts/**/*.mjs' 'tests/**/*.js' 'manifest.json'",
-    "format:check": "prettier --check 'src/lib/**/*.js' 'src/content/**/*.js' 'src/background.js' 'src/popup/**/*.js' 'scripts/**/*.mjs' 'tests/**/*.js' 'manifest.json'"
+    "format:check": "prettier --check 'src/lib/**/*.js' 'src/content/**/*.js' 'src/background.js' 'src/popup/**/*.js' 'scripts/**/*.mjs' 'tests/**/*.js' 'manifest.json'",
+    "build:chrome": "node scripts/build-chrome.mjs",
+    "build:firefox": "node scripts/build-firefox.mjs",
+    "build": "npm run build:chrome && npm run build:firefox"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.5",
