@@ -16,7 +16,7 @@ format:
 	npm run format
 
 lint:
-    npm run format:check
+	npm run format:check
 
 package-firefox:
 	rm -rf $(FIREFOX_BUILD_DIR)
