@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kufar.by Валюты</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <header class="header">
+        <h1 class="header__title">Kufar.by Валюты</h1>
+        <p id="statusText" class="header__status" aria-live="polite"></p>
+      </header>
+
+      <section id="loading" class="loading" aria-live="polite" hidden>
+        Загрузка...
+      </section>
+
+      <section id="error-section" class="error" role="alert" hidden>
+        <p id="errorText"></p>
+      </section>
+
+      <section
+        id="rates-section"
+        class="rates"
+        aria-labelledby="rates-title"
+        hidden
+      >
+        <h2 id="rates-title" class="visually-hidden">Курсы НБРБ</h2>
+        <div id="ratesList"></div>
+      </section>
+
+      <section
+        id="converter-section"
+        class="converter"
+        aria-labelledby="converter-title"
+        hidden
+      >
+        <h2 id="converter-title" class="converter__title">Конвертер</h2>
+        <div class="converter__row">
+          <input
+            id="converterInput"
+            class="converter__input"
+            type="number"
+            min="0"
+            step="0.01"
+            inputmode="decimal"
+            aria-label="Сумма в выбранной валюте"
+            placeholder="Сумма"
+          />
+          <select
+            id="converterCurrency"
+            class="converter__select"
+            aria-label="Валюта"
+          ></select>
+        </div>
+        <p id="converterOutput" class="converter__result">-</p>
+      </section>
+
+      <section class="settings" aria-labelledby="currency-settings-title">
+        <h2 id="currency-settings-title" class="visually-hidden">
+          Настройки валюты
+        </h2>
+        <label class="settings__label" for="selectedCurrency">
+          Валюта для цен на Kufar
+        </label>
+        <select
+          id="selectedCurrency"
+          class="settings__select"
+          aria-label="Валюта для цен на Kufar"
+        ></select>
+      </section>
+
+      <section class="settings" aria-labelledby="domain-settings-title">
+        <h2 id="domain-settings-title" class="converter__title">Сайты Kufar</h2>
+        <ul id="domainList" class="domain-list"></ul>
+      </section>
+
+      <footer class="footer">
+        <p id="lastUpdated" class="footer__updated">Обновлено: -</p>
+        <button id="refreshButton" class="footer__refresh" type="button">
+          Обновить
+        </button>
+      </footer>
+    </main>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>
