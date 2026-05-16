@@ -1,6 +1,6 @@
 EXT_NAME := kufar-currencies
 
-.PHONY: test test-coverage format lint package-firefox package-chrome build-firefox build-chrome build clean run run-chrome
+.PHONY: test test-coverage format lint package package-firefox package-chrome build-firefox build-chrome build clean run run-chrome
 
 test:
 	npm test
@@ -19,6 +19,8 @@ package-firefox:
 
 package-chrome:
 	npm run package:chrome
+
+package: package-chrome package-firefox
 
 build-firefox: lint test package-firefox
 
