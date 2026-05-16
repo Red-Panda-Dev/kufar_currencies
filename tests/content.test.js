@@ -328,7 +328,7 @@ describe("content/kufar.js", () => {
       }
     });
 
-    it("converts per-month prices on real estate pages", async () => {
+    it("converts per-month prices on real estate pages preserving unit suffix", async () => {
       const session = await bootstrapContentScript(
         realEstateFilterHtml,
         {
@@ -344,8 +344,77 @@ describe("content/kufar.js", () => {
           "[data-kufar-original-price-amount='1246']",
         );
         expect(perMonthNode).toBeTruthy();
-        expect(perMonthNode.dataset.kufarOriginalPriceText).toContain("мес");
+        expect(perMonthNode.dataset.kufarOriginalPriceUnit).toBe(" / мес.");
         expect(perMonthNode.textContent).toContain("$");
+        expect(perMonthNode.textContent).toContain("/ мес.");
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts per-meter prices with Latin p. marker", async () => {
+      const latinPHtml = `
+        <main>
+          <a data-testid="kufar-realty-card-1">
+            <div class="styles_price__gpHWH">
+              <span class="styles_price__byr__lLSfd">214 000 р.</span>
+              <span class="styles_price__meter__37vhl">6 096.86 p. / м²</span>
+            </div>
+          </a>
+        </main>
+      `;
+      const session = await bootstrapContentScript(
+        latinPHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { "re.kufar.by": true },
+        },
+        { url: "https://re.kufar.by/" },
+      );
+
+      try {
+        const perMeterNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount='6096.86']",
+        );
+        expect(perMeterNode).toBeTruthy();
+        expect(perMeterNode.dataset.kufarOriginalPriceUnit).toBe(" / м²");
+        expect(perMeterNode.textContent).toContain("$");
+        expect(perMeterNode.textContent).toContain("/ м²");
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts per-meter prices preserving unit suffix", async () => {
+      const perMeterHtml = `
+        <main>
+          <a data-testid="kufar-realty-card-1">
+            <div class="styles_price__9m_rI">
+              <span class="styles_price__byr__j_G8C">214 000 р.</span>
+              <span class="styles_price__meter__N5Wmu">6 096.86 р. / м²</span>
+            </div>
+          </a>
+        </main>
+      `;
+      const session = await bootstrapContentScript(
+        perMeterHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { "re.kufar.by": true },
+        },
+        { url: "https://re.kufar.by/" },
+      );
+
+      try {
+        const perMeterNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount='6096.86']",
+        );
+        expect(perMeterNode).toBeTruthy();
+        expect(perMeterNode.dataset.kufarOriginalPriceUnit).toBe(" / м²");
+        expect(perMeterNode.textContent).toContain("$");
+        expect(perMeterNode.textContent).toContain("/ м²");
       } finally {
         session.cleanup();
       }
