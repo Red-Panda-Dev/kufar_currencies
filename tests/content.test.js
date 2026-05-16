@@ -110,6 +110,18 @@ describe("content/kufar.js", () => {
     resolve(process.cwd(), "examples", "auto", "item_page.html"),
     "utf8",
   );
+  const realEstateIndexHtml = readFileSync(
+    resolve(process.cwd(), "examples", "real_estate", "index_page.html"),
+    "utf8",
+  );
+  const realEstateItemHtml = readFileSync(
+    resolve(process.cwd(), "examples", "real_estate", "item_page.html"),
+    "utf8",
+  );
+  const realEstateFilterHtml = readFileSync(
+    resolve(process.cwd(), "examples", "real_estate", "filter_page.html"),
+    "utf8",
+  );
 
   it("converts BYN text on auto.kufar.by", async () => {
     const session = await bootstrapContentScript(indexHtml, {
@@ -231,5 +243,112 @@ describe("content/kufar.js", () => {
     } finally {
       session.cleanup();
     }
+  });
+
+  describe("re.kufar.by", () => {
+    it("converts BYN text on real estate index page", async () => {
+      const session = await bootstrapContentScript(
+        realEstateIndexHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { "re.kufar.by": true },
+        },
+        { url: "https://re.kufar.by/" },
+      );
+
+      try {
+        const convertedNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount='355436']",
+        );
+        expect(convertedNode).toBeTruthy();
+        expect(convertedNode.textContent).toContain("$");
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts item page prices on real estate host", async () => {
+      const session = await bootstrapContentScript(
+        realEstateItemHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { "re.kufar.by": true },
+        },
+        { url: "https://re.kufar.by/" },
+      );
+
+      try {
+        const convertedNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount='418697']",
+        );
+        expect(convertedNode).toBeTruthy();
+        expect(convertedNode.textContent).toContain("$");
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("does not convert negative labels on real estate pages", async () => {
+      const negativeLabelsHtml = `
+        <main>
+          <a data-testid="kufar-realty-card-1">
+            <span>Обмен</span>
+            <span>Бесплатно</span>
+            <span>355 436 р.</span>
+          </a>
+        </main>
+      `;
+      const session = await bootstrapContentScript(
+        negativeLabelsHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { "re.kufar.by": true },
+        },
+        { url: "https://re.kufar.by/" },
+      );
+
+      try {
+        const nodes = Array.from(
+          session.dom.window.document.querySelectorAll("span, p, div, strong"),
+        );
+        const barterLabel = nodes.find((node) => node.textContent === "Обмен");
+        const freeLabel = nodes.find(
+          (node) => node.textContent === "Бесплатно",
+        );
+
+        expect(barterLabel).toBeTruthy();
+        expect(freeLabel).toBeTruthy();
+        expect(barterLabel.dataset.kufarOriginalPriceText).toBeUndefined();
+        expect(freeLabel.dataset.kufarOriginalPriceText).toBeUndefined();
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts per-month prices on real estate pages", async () => {
+      const session = await bootstrapContentScript(
+        realEstateFilterHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { "re.kufar.by": true },
+        },
+        { url: "https://re.kufar.by/" },
+      );
+
+      try {
+        const perMonthNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount='1246']",
+        );
+        expect(perMonthNode).toBeTruthy();
+        expect(perMonthNode.dataset.kufarOriginalPriceText).toContain("мес");
+        expect(perMonthNode.textContent).toContain("$");
+      } finally {
+        session.cleanup();
+      }
+    });
   });
 });
