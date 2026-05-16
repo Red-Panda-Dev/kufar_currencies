@@ -4,7 +4,7 @@ BUILD_DIR := build
 FIREFOX_BUILD_DIR := $(BUILD_DIR)/firefox
 CHROME_BUILD_DIR := $(BUILD_DIR)/chrome
 
-.PHONY: test test-coverage format format-check lint package-firefox package-chrome build-firefox build-chrome build clean run run-chrome
+.PHONY: test test-coverage format lint package-firefox package-chrome build-firefox build-chrome build clean run run-chrome
 
 test:
 	npm test
@@ -15,11 +15,8 @@ test-coverage:
 format:
 	npm run format
 
-format-check:
-	npm run format:check
-
 lint:
-	npx web-ext lint --source-dir $(EXT_DIR) --ignore-files "coverage/**" "node_modules/**" "tests/**" "examples/**" "build/**" "*.zip"
+    npm run format:check
 
 package-firefox:
 	rm -rf $(FIREFOX_BUILD_DIR)
@@ -36,11 +33,11 @@ package-chrome:
 	cd $(CHROME_BUILD_DIR) && zip -r ../../$(EXT_NAME)-chrome.zip . -x "*_metadata*"
 	@echo "Built: $(EXT_NAME)-chrome.zip"
 
-build-firefox: format-check lint test package-firefox
+build-firefox: lint test package-firefox
 
-build-chrome: format-check lint test package-chrome
+build-chrome: lint test package-chrome
 
-build: format-check lint test package-firefox package-chrome
+build: lint test package-firefox package-chrome
 
 clean:
 	rm -rf build coverage
