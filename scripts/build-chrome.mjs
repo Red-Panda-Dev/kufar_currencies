@@ -1,9 +1,11 @@
-import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { removeAgentsFiles, createZip } from "./build-utils.mjs";
 
 const rootDir = process.cwd();
 const chromeDir = path.join(rootDir, "build", "chrome");
 const manifestPath = path.join(rootDir, "manifest.json");
+const EXT_NAME = "kufar-currencies";
 
 async function copyIfExists(relativePath) {
   const source = path.join(rootDir, relativePath);
@@ -15,18 +17,6 @@ async function copyIfExists(relativePath) {
       return;
     }
     throw error;
-  }
-}
-
-async function removeAgentsFiles(dir) {
-  const entries = await readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      await removeAgentsFiles(fullPath);
-    } else if (entry.name === "AGENTS.md") {
-      await rm(fullPath);
-    }
   }
 }
 
@@ -67,6 +57,8 @@ async function buildChrome() {
     path.join(chromeDir, "README_CHROME_INSTALL.txt"),
     `${chromeInstallNotes}\n`,
   );
+
+  await createZip(chromeDir, path.join(rootDir, `${EXT_NAME}-chrome.zip`));
 }
 
 buildChrome();
