@@ -75,6 +75,9 @@ Coverage thresholds: 80% lines/functions/branches/statements for `lib/**/*.js` (
 
 - `README.md` — user-facing overview, dev commands
 - `ARCHITECTURE.md` — component diagram, data flow, invariants
+- `content/AGENTS.md` — content script local rules (IIFE, DOM scanning, duplication)
+- `tests/AGENTS.md` — test file split, fixture usage, coverage boundaries
+- `popup/AGENTS.md` — popup-specific conventions (DOMAIN_REGISTRY, CSS, converter)
 
 ## Repository-specific gotchas
 
