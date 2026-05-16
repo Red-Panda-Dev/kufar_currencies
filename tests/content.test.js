@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 
 const contentSource = readFileSync(
-  resolve(process.cwd(), "content", "kufar.js"),
+  resolve(process.cwd(), "src", "content", "kufar.js"),
   "utf8",
 );
 
@@ -72,30 +72,26 @@ async function bootstrapContentScript(html, initialState, options = {}) {
   });
 
   const browserMock = createBrowserMock(initialState, options);
-  const rafTimers = new Set();
   dom.window.browser = browserMock.browser;
   dom.window.chrome = browserMock.browser;
   dom.window.requestAnimationFrame = (cb) => {
-    const timer = setTimeout(() => {
-      rafTimers.delete(timer);
-      cb();
-    }, 0);
-    rafTimers.add(timer);
-    return timer;
+    setTimeout(cb, 0);
   };
 
   dom.window.eval(contentSource);
-  await new Promise((resolvePromise) => setTimeout(resolvePromise, 0));
-  await new Promise((resolvePromise) => setTimeout(resolvePromise, 0));
+
+  // Wait for async start() (multiple awaits) + rAF debounce + mutation cascade.
+  // start() does: storage.get (yield) → ensureRatesIfNeeded (yield) → setupObserver → scheduleApply (rAF).
+  // applyConversion() triggers characterData mutations which may schedule one more rAF cycle.
+  // 5 ticks covers: 2 for start() async yields, 1 for rAF #1, 1 for cascade rAF #2, 1 safety.
+  for (let i = 0; i < 5; i++) {
+    await new Promise((r) => setTimeout(r, 0));
+  }
 
   return {
     dom,
     browserMock,
     cleanup() {
-      for (const timer of rafTimers) {
-        clearTimeout(timer);
-      }
-      rafTimers.clear();
       dom.window.close();
     },
   };
