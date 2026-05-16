@@ -2,6 +2,8 @@
 
 Браузерное расширение (Manifest V3) для Firefox и Chrome-based браузеров, которое автоматически заменяет цены на Kufar.by из белорусских рублей (BYN) в выбранную валюту: USD, EUR или RUB. Курсы берутся из публичного API Национального банка Республики Беларусь.
 
+Текущая версия: **0.4.0**
+
 Основная функция расширения — менять отображаемые цены на страницах Kufar, чтобы пользователь сразу видел стоимость товара в удобной валюте.
 
 ## Возможности
@@ -35,8 +37,10 @@
 
 В секции «Сайты Kufar» можно включить или выключить замену цен для конкретных разделов:
 
-- **Авто** (auto.kufar.by) — поддерживается в текущей версии.
-- **Недвижимость**, **Путешествия**, **Куфар (основной)** — планируются в будущих версиях.
+- **Авто** (auto.kufar.by) — поддерживается.
+- **Недвижимость** (re.kufar.by) — поддерживается.
+- **Путешествия** (travel.kufar.by) — поддерживается.
+- **Куфар (основной)** (kufar.by) — планируется.
 
 Переключатель `Везде` управляет всеми активными доменами одновременно.
 
@@ -45,8 +49,8 @@
 | Домен           | Статус         |
 | --------------- | -------------- |
 | auto.kufar.by   | Поддерживается |
-| re.kufar.by     | Планируется    |
-| travel.kufar.by | Планируется    |
+| re.kufar.by     | Поддерживается |
+| travel.kufar.by | Поддерживается |
 | kufar.by        | Планируется    |
 
 ## Скриншоты
@@ -76,6 +80,12 @@
 - `https://api.nbrb.by/*` — загрузка курсов НБРБ.
 - `https://kufar.by/*`, `https://*.kufar.by/*` — запуск content script на Kufar.
 
+Firefox-специфичные настройки (`browser_specific_settings`):
+
+- `id`: `kufar-by-currencies@redpandadev`
+- `strict_min_version`: `142.0`
+- `data_collection_permissions`: `none`
+
 ### `background.js`
 
 Фоновый модуль расширения.
@@ -104,6 +114,7 @@ Content script, который работает на страницах Kufar.
 - Обрабатывает динамически добавленные элементы через `MutationObserver` с debounce через `requestAnimationFrame`.
 - Реагирует на изменение выбранной валюты без перезагрузки страницы.
 - Игнорирует «Договорная», «Бесплатно», «Обмен», «Цена не указана».
+- Сохраняет пометку «от» при конвертации цен (например, «от 100 BYN» → «от 29 $»).
 
 **Особенность:** Content script является самодостаточным IIFE без импортов. Функции `parseBynPrice`, `convertFromBYN`, `formatDisplayPrice` дублированы из `lib/rates.js`.
 
@@ -146,16 +157,25 @@ Content script, который работает на страницах Kufar.
 - Поведение content script на сохраненных HTML-примерах Kufar.
 - Восстановление оригинальных BYN-цен.
 
-### `scripts/build-chrome.mjs`
+### `examples/`
 
-Build-скрипт для Chrome-based браузеров.
+HTML-фикстуры с реальных страниц Kufar для тестирования и отладки:
 
-Функции:
+- `auto/` — главная страница, список фильтров, карточка товара (auto.kufar.by)
+- `real_estate/` — главная страница, список фильтров, карточка товара (re.kufar.by)
+- `travel/` — главная страница, список фильтров, карточки предложений v1/v2 (travel.kufar.by)
+- `nbrb_response.json` — пример ответа API НБРБ
+- `screenshots/` — скриншоты расширения
 
-- Создает `build/chrome/`.
-- Копирует файлы расширения для Chrome-пакета.
-- Генерирует `build/chrome/manifest.json` из `manifest.json` (заменяет background на `service_worker`, удаляет `browser_specific_settings`).
-- Добавляет в `build/chrome/README_CHROME_INSTALL.txt` инструкции по установке.
+### `scripts/`
+
+Build-скрипты для упаковки расширения.
+
+| Файл | Назначение |
+|---|---|
+| `build-chrome.mjs` | Chrome build: удаляет `browser_specific_settings`, конвертирует `background.scripts` → `service_worker`, создаёт ZIP |
+| `build-firefox.mjs` | Firefox build: копирует файлы, создаёт ZIP |
+| `build-utils.mjs` | Общие утилиты: `createZip`, `removeAgentsFiles` |
 
 В исходных entrypoint-файлах (`background.js`, `content/kufar.js`, `popup/popup.js`) есть shim `globalThis.browser ??= globalThis.chrome;`, чтобы один код работал с Firefox `browser.*` и Chrome `chrome.*` API.
 
@@ -186,7 +206,7 @@ Build-скрипт для Chrome-based браузеров.
 
 ### Firefox для Android
 
-1. Соберите расширение: `npm run build:android`.
+1. Соберите расширение: `make package-firefox`.
 2. Загрузите `kufar-currencies-firefox.zip` на устройство.
 3. Установите через Firefox Nightly или Beta с включенными расширенными настройками.
 
@@ -217,14 +237,8 @@ npm install
 ### Команды разработки
 
 ```bash
-# Запуск всех тестов
+# Запуск тестов с покрытием
 npm test
-
-# Тесты в режиме наблюдения
-npm run test:watch
-
-# Тесты с покрытием
-npm run test:coverage
 
 # Проверка форматирования
 npm run format:check
@@ -232,17 +246,29 @@ npm run format:check
 # Форматирование кода
 npm run format
 
-# Линтер (web-ext)
-npm run lint
-
 # Сборка Firefox
-npm run build:firefox
+npm run package:firefox
 
 # Сборка Chrome
-npm run build:chrome
+npm run package:chrome
 
 # Полная сборка (Firefox + Chrome)
-npm run build
+npm run package
+```
+
+### Makefile-команды
+
+```bash
+make test                                # Запуск тестов
+make format                              # Форматирование
+make lint                                # Проверка форматирования
+make build                               # lint + test + package (оба браузера)
+make build-chrome                        # lint + test + package Chrome
+make build-firefox                       # lint + test + package Firefox
+make package                             # Package Chrome + Firefox
+make package-chrome                      # Package Chrome only
+make package-firefox                     # Package Firefox only
+make clean                               # Удалить build/, coverage/, *.zip
 ```
 
 ### Запуск тестов отдельно
@@ -260,29 +286,35 @@ npx vitest run tests/content.test.js
 ```
 kufar_currencies/
 ├── manifest.json              # Manifest V3, entrypoints, разрешения
-├── background.js               # Background service worker — сеть, кэш, alarms
-├── lib/
-│   └── rates.js                # Чистые функции: parseRates, convertFromBYN, форматирование
-├── content/
-│   └── kufar.js                # IIFE content script — DOM, замена цен, MutationObserver
-├── popup/
-│   ├── popup.html              # Разметка popup
-│   ├── popup.css               # Стили popup
-│   └── popup.js                # Логика popup, импорты из lib/rates.js
+├── Makefile                   # Команды: build, test, lint, package, clean
+├── src/
+│   ├── background.js          # Background service worker — сеть, кэш, alarms
+│   ├── lib/
+│   │   └── rates.js           # Чистые функции: parseRates, convertFromBYN, форматирование
+│   ├── content/
+│   │   └── kufar.js           # IIFE content script — DOM, замена цен, MutationObserver
+│   └── popup/
+│       ├── popup.html         # Разметка popup
+│       ├── popup.css          # Стили popup (light/dark via prefers-color-scheme)
+│       └── popup.js           # Логика popup, импорты из lib/rates.js
 ├── scripts/
-│   └── build-chrome.mjs        # Chrome build: удаляет Gecko-ключи, service_worker
+│   ├── build-chrome.mjs       # Chrome build: service_worker, ZIP
+│   ├── build-firefox.mjs      # Firefox build: ZIP
+│   └── build-utils.mjs        # Общие утилиты: createZip, removeAgentsFiles
 ├── tests/
-│   ├── parse.test.js           # Unit-тесты для lib/rates.js
-│   └── content.test.js         # JSDOM-тесты для content script
+│   ├── parse.test.js          # Unit-тесты для lib/rates.js
+│   └── content.test.js        # JSDOM-тесты для content script
 ├── examples/
-│   ├── auto/                   # HTML-фикстуры с auto.kufar.by
-│   ├── real_estate/            # HTML-фикстуры с re.kufar.by (будущее)
-│   ├── nbrb_response.json      # Пример ответа API НБРБ
-│   └── screenshots/            # Скриншоты расширения
-├── icons/                      # Иконки расширения (SVG + PNG)
-├── vitest.config.js            # Конфигурация тестов, 80% coverage для lib/
+│   ├── auto/                  # HTML-фикстуры с auto.kufar.by
+│   ├── real_estate/           # HTML-фикстуры с re.kufar.by
+│   ├── travel/                # HTML-фикстуры с travel.kufar.by
+│   ├── nbrb_response.json     # Пример ответа API НБРБ
+│   └── screenshots/           # Скриншоты расширения
+├── icons/                     # Иконки расширения (SVG + PNG)
+├── vitest.config.js           # Конфигурация тестов, 80% coverage для lib/
 └── build/
-    └── chrome/                 # Chrome-сборка (генерируется)
+    ├── chrome/                # Chrome-сборка (генерируется)
+    └── firefox/               # Firefox-сборка (генерируется)
 ```
 
 ### Архитектурные границы
