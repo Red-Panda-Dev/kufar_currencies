@@ -1,20 +1,10 @@
 {
   "name": "kufar-currencies",
-  "private": true,
   "type": "module",
   "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "format": "prettier --write 'README.md' 'ARCHITECTURE.md' 'lib/**/*.js' 'content/**/*.js' 'background.js' 'popup/**/*.js' 'popup/**/*.html' 'popup/**/*.css' 'scripts/**/*.mjs' 'tests/**/*.js' 'manifest.json'",
-    "format:check": "prettier --check 'README.md' 'ARCHITECTURE.md' 'lib/**/*.js' 'content/**/*.js' 'background.js' 'popup/**/*.js' 'popup/**/*.html' 'popup/**/*.css' 'scripts/**/*.mjs' 'tests/**/*.js' 'manifest.json'",
-    "lint": "npx web-ext lint --source-dir . --ignore-files 'coverage/**' 'node_modules/**' 'tests/**' 'examples/**' 'build/**' '*.zip'",
-    "package:firefox": "rm -rf build/firefox && mkdir -p build/firefox/examples && cp -r manifest.json background.js lib content popup icons build/firefox/ && cp examples/nbrb_response.json build/firefox/examples/ && rm -f kufar-currencies-firefox.zip && cd build/firefox && zip -r ../../kufar-currencies-firefox.zip .",
-    "package:chrome": "node scripts/build-chrome.mjs && rm -f kufar-currencies-chrome.zip && cd build/chrome && zip -r ../../kufar-currencies-chrome.zip . -x '*_metadata*'",
-    "build:firefox": "npm run format:check && npm run lint && npm test && npm run package:firefox",
-    "build:chrome": "npm run format:check && npm run lint && npm test && npm run package:chrome",
-    "build:android": "npm run build:firefox",
-    "build": "npm run format:check && npm run lint && npm test && npm run package:firefox && npm run package:chrome"
+    "test": "vitest run --coverage",
+    "format": "prettier --write 'lib/**/*.js' 'content/**/*.js' 'background.js' 'popup/**/*.js' 'scripts/**/*.mjs' 'tests/**/*.js' 'manifest.json'",
+    "format:check": "prettier --check 'lib/**/*.js' 'content/**/*.js' 'background.js' 'popup/**/*.js' 'scripts/**/*.mjs' 'tests/**/*.js' 'manifest.json'"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.5",
