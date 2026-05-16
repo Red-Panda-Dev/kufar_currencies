@@ -6,7 +6,7 @@ This is a Manifest V3 WebExtension (Chrome + Firefox) that replaces BYN-denomina
 
 The problem it solves: Kufar.by lists all prices in Belarusian rubles, but users often want to see equivalent amounts in more familiar currencies. The extension fetches daily NBRB rates, stores them in extension storage, and content scripts rewrite visible price text in-place on supported Kufar subdomains. Inferred: business intent from `manifest.json:5` description and Russian-language UI.
 
-The architectural paradigm is a split-process browser extension with four isolated execution contexts (background service worker, content script, popup, and a shared pure-logic library). All inter-context communication flows through `browser.storage.local` and `browser.runtime.sendMessage` — there is no direct function call across contexts. Observed: `manifest.json:12-15`, `manifest.json:25-29`, `manifest.json:17-23`, `background.js:90-111`, `content/kufar.js:241-244`.
+The architectural paradigm is a split-process browser extension with four isolated execution contexts (background service worker, content script, popup, and a shared pure-logic library). All inter-context communication flows through `browser.storage.local` and `browser.runtime.sendMessage` — there is no direct function call across contexts. Observed: `manifest.json:12-15`, `manifest.json:25-29`, `manifest.json:17-23`, `background.js:90-111`, `content/kufar.js:253`.
 
 Evidence anchors: `manifest.json`, `background.js`, `lib/rates.js`, `content/kufar.js`, `popup/popup.js`, `popup/popup.html`.
 
@@ -48,29 +48,31 @@ Key boundaries:
 ```
 kufar_currencies/
 ├── manifest.json              # Extension manifest (MV3), entrypoints, permissions
-├── background.js               # Background service worker — network, cache, alarms, messages
+├── background.js              # Background service worker — network, cache, alarms, messages
 ├── lib/
-│   └── rates.js                # Pure functions: parseRates, convertFromBYN, parseBynPrice, formatting
+│   └── rates.js               # Pure functions: parseRates, convertFromBYN, parseBynPrice, formatting
 ├── content/
-│   └── kufar.js                # IIFE content script — DOM scanning, price conversion, MutationObserver
+│   └── kufar.js               # IIFE content script — DOM scanning, price conversion, MutationObserver
 ├── popup/
-│   ├── popup.html              # Popup markup
-│   ├── popup.css               # Popup styles
-│   └── popup.js                # Popup logic, imports lib/rates.js, domain toggles, converter
+│   ├── popup.html             # Popup markup
+│   ├── popup.css              # Popup styles (light/dark via prefers-color-scheme)
+│   └── popup.js               # Popup logic, imports lib/rates.js, domain toggles, converter
 ├── scripts/
-│   └── build-chrome.mjs        # Chrome build: strips Gecko keys, transforms background to service_worker
+│   └── build-chrome.mjs       # Chrome build: strips Gecko keys, transforms background to service_worker
 ├── tests/
-│   ├── parse.test.js           # Unit tests for lib/rates.js
-│   └── content.test.js         # JSDOM integration tests for content script
+│   ├── parse.test.js          # Unit tests for lib/rates.js
+│   └── content.test.js        # JSDOM integration tests for content script
 ├── examples/
-│   ├── auto/                   # HTML fixtures from auto.kufar.by
-│   ├── real_estate/            # HTML fixtures from re.kufar.by (future)
-│   ├── nbrb_response.json     # Sample NBRB API response
-│   └── screenshots/            # Extension screenshots
-├── icons/                      # Extension icons (SVG + PNG)
-├── vitest.config.js            # Test config, 80% coverage threshold for lib/
-└── build/
-    └── chrome/                 # Chrome-specific build output (generated)
+│   ├── auto/                  # HTML fixtures from auto.kufar.by
+│   ├── real_estate/           # HTML fixtures from re.kufar.by
+│   ├── nbrb_response.json    # Sample NBRB API response
+│   └── screenshots/           # Extension screenshots
+├── icons/                     # Extension icons (SVG + PNG)
+├── vitest.config.js           # Test config, 80% coverage threshold for lib/
+├── Makefile                   # Build targets: test, format, lint, package, build
+└── build/                     # Build output (generated, not checked in)
+    ├── firefox/
+    └── chrome/
 ```
 
 Where is X?
@@ -79,10 +81,10 @@ Where is X?
 - **Rate parsing and conversion math**: `lib/rates.js`
 - **DOM price replacement**: `content/kufar.js`
 - **User-facing settings UI**: `popup/`
-- **Domain registry (supported subdomains)**: `content/kufar.js:4-13` and `popup/popup.js:13-62` (kept in sync)
+- **Domain registry (supported subdomains)**: `content/kufar.js:4-10` and `popup/popup.js:16-48` (kept in sync)
 - **Chrome packaging**: `scripts/build-chrome.mjs`
 - **Test fixtures**: `examples/`
-- **Browser compatibility shim** (`browser ??= chrome`): `background.js:3`, `content/kufar.js:2`, `popup/popup.js:11`
+- **Browser compatibility shim** (`browser ??= chrome`): `background.js:3`, `content/kufar.js:2`, `popup/popup.js:12`
 
 ## 4. Life of a Request / Primary Data Flow
 
@@ -94,17 +96,17 @@ Where is X?
 
 **Page price conversion (content-script-driven):**
 
-1. `content/kufar.js:286-308` — IIFE `start()` reads `ratesData`, `selectedCurrency`, `domainSettings` from storage; if host is active and no rates cached, sends `ensureRates` message to background (`content/kufar.js:232-245`).
-2. `content/kufar.js:175-213` — `applyConversion()` scans safe DOM containers for leaf text nodes matching BYN patterns via `parseBynPrice()`, stores original text/amount in `data-kufar-original-price-text` and `data-kufar-original-price-amount`, then overwrites `textContent` with `convertFromBYN()` + `formatDisplayPrice()`.
-3. `content/kufar.js:216-230` — `scheduleApply()` debounces DOM recalculation via `requestAnimationFrame`.
-4. `content/kufar.js:267-284` — `MutationObserver` on `document.body` triggers `scheduleApply()` on any mutation.
-5. `content/kufar.js:247-265` — Storage change listener updates local state and triggers `scheduleApply()`.
+1. `content/kufar.js:298-320` — IIFE `start()` reads `ratesData`, `selectedCurrency`, `domainSettings` from storage; if host is active and no rates cached, sends `ensureRates` message to background (`content/kufar.js:244-257`).
+2. `content/kufar.js:185-226` — `applyConversion()` scans safe DOM containers for leaf text nodes matching BYN patterns via `parseBynPrice()`, stores original text/amount in `data-kufar-original-price-text` and `data-kufar-original-price-amount`, then overwrites `textContent` with `convertFromBYN()` + `formatDisplayPrice()`.
+3. `content/kufar.js:228-242` — `scheduleApply()` debounces DOM recalculation via `requestAnimationFrame`.
+4. `content/kufar.js:279-296` — `MutationObserver` on `document.body` triggers `scheduleApply()` on any mutation.
+5. `content/kufar.js:259-277` — Storage change listener updates local state and triggers `scheduleApply()`.
 
 **Popup interaction:**
 
-1. `popup/popup.js:173-248` — `init()` reads storage, renders rates/domain toggles/converter.
+1. `popup/popup.js:422-428` — `init()` reads storage, renders rates/domain toggles/converter.
 2. Currency or domain changes are written to `browser.storage.local`, which propagates to content script via the storage change listener.
-3. Refresh button sends `refreshRates` message to background (`popup/popup.js:234`), then re-reads storage.
+3. Refresh button sends `refreshRates` message to background (`popup/popup.js:399-401`), then re-reads storage.
 
 ## 5. Architectural Invariants & Constraints
 
@@ -126,7 +128,7 @@ Where is X?
 
 - **Rule:** Conversion always operates on the original BYN amount stored in `data-kufar-original-price-amount`. Never re-convert an already-converted value.
   - **Rationale:** Re-converting would accumulate floating-point error and produce wrong prices.
-  - **Enforcement / Signals (Observed):** `content/kufar.js:192-198` stores original on first encounter and reads from `data-kufar-original-price-amount` on subsequent passes.
+  - **Enforcement / Signals (Observed):** `content/kufar.js:202-209` stores original on first encounter and reads from `data-kufar-original-price-amount` on subsequent passes.
 
 - **Rule:** `DOMAIN_REGISTRY` must be kept in sync between `content/kufar.js` and `popup/popup.js`.
   - **Rationale:** Both contexts need the same host list but cannot share modules.
@@ -138,15 +140,19 @@ Where is X?
 
 - **Rule:** MutationObserver must use `scheduleApply` (rAF debounce), never synchronous full recalculation.
   - **Rationale:** Synchronous recalculation on every mutation would freeze the page on DOM-heavy Kufar listings.
-  - **Enforcement / Signals (Observed):** `content/kufar.js:275-277` observer callback calls `scheduleApply()`; `content/kufar.js:216-230` uses `requestAnimationFrame`.
+  - **Enforcement / Signals (Observed):** `content/kufar.js:287-289` observer callback calls `scheduleApply()`; `content/kufar.js:228-242` uses `requestAnimationFrame`.
 
 - **Rule:** Price conversion is scoped to safe containers and leaf text nodes only.
   - **Rationale:** Prevents accidentally converting non-price text or corrupting element structure.
-  - **Enforcement / Signals (Observed):** `content/kufar.js:133-158` limits scanning to specific container selectors and elements with `childElementCount === 0`.
+  - **Enforcement / Signals (Observed):** `content/kufar.js:140-168` limits scanning to specific container selectors and elements with `childElementCount === 0`.
 
 - **Rule:** `NEGATIVE_LABELS` ("Договорная", "Бесплатно", "Обмен", "Цена не указана") prevent conversion of non-price text matching BYN patterns.
   - **Rationale:** These labels appear where prices normally go but are not monetary amounts.
-  - **Enforcement / Signals (Observed):** `content/kufar.js:20-25` defines the list; `content/kufar.js:78-80` checks it in `parseBynPrice`.
+  - **Enforcement / Signals (Observed):** `content/kufar.js:17-22` defines the list; `content/kufar.js:75-77` checks it in `parseBynPrice`.
+
+- **Rule:** Chrome build must strip `browser_specific_settings` and convert `background.scripts` to `background.service_worker`.
+  - **Rationale:** Chrome MV3 requires service workers, not background scripts; Gecko-specific keys cause lint errors.
+  - **Enforcement / Signals (Observed):** `scripts/build-chrome.mjs:26-34` performs the transform at build time.
 
 ## 6. Documentation Strategy
 
@@ -157,11 +163,11 @@ Module-level `AGENTS.md` files provide local detail for specific areas:
 - `AGENTS.md` (root) — repository overview, validation commands, change rules, domain-registry sync requirements.
 - `content/AGENTS.md` — content-script boundaries, safe change rules, local invariants.
 - `tests/AGENTS.md` — test conventions and fixture guidance.
+- `popup/AGENTS.md` — popup-specific conventions, DOMAIN_REGISTRY, CSS, converter.
 
 Existing docs by path:
 
 - `README.md` — user-facing overview and development commands.
-- `KUFAR_PLUGIN_PLAN.md` — original planning document (historical).
 - `AGENTS.md` — root-level developer guide with change rules and gotchas.
 
 What belongs globally vs. locally: architectural boundaries, invariant rules, component data flow, and the code map belong here. Per-module gotchas, specific function contracts, and local test instructions belong in module-level `AGENTS.md` files.
