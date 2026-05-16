@@ -2,8 +2,8 @@
   globalThis.browser ??= globalThis.chrome;
 
   const DOMAIN_REGISTRY = [
-    { host: "auto.kufar.by", supported: true, defaultEnabled: true },
     { host: "www.kufar.by", supported: false, defaultEnabled: false },
+    { host: "auto.kufar.by", supported: true, defaultEnabled: true },
     { host: "re.kufar.by", supported: true, defaultEnabled: true },
     { host: "travel.kufar.by", supported: false, defaultEnabled: false },
     { host: "kufar.by", supported: false, defaultEnabled: false },
@@ -82,7 +82,7 @@
 
     const withoutPrefix = normalized.replace(/^от\s+/i, "");
     const match = withoutPrefix.match(
-      /(^|\D)(\d[\d\s]*([.,]\d+)?)\s*(BYN\b|бел\.\s*руб\.?|р\.?(?=\s|$))/i,
+      /(^|\D)(\d[\d\s]*([.,]\d+)?)\s*(BYN\b|бел\.\s*руб\.?|[рp]\.?(?=\s|$))/i,
     );
     if (!match) {
       return null;
@@ -90,7 +90,15 @@
 
     const numberValue = match[2].replace(/\s+/g, "").replace(",", ".");
     const parsed = Number.parseFloat(numberValue);
-    return Number.isFinite(parsed) ? parsed : null;
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+
+    const matchedEnd = match.index + match[0].length;
+    const remainder = withoutPrefix.slice(matchedEnd).trim();
+    const unitSuffix = remainder ? ` ${remainder}` : "";
+
+    return { amount: parsed, unitSuffix };
   }
 
   function convertFromBYN(amountInByn, rateInfo) {
@@ -193,11 +201,12 @@
     for (const node of getPriceNodes()) {
       if (!node.dataset.kufarOriginalPriceText) {
         const parsed = parseBynPrice(node.textContent);
-        if (!Number.isFinite(parsed)) {
+        if (!parsed || !Number.isFinite(parsed.amount)) {
           continue;
         }
         node.dataset.kufarOriginalPriceText = node.textContent;
-        node.dataset.kufarOriginalPriceAmount = String(parsed);
+        node.dataset.kufarOriginalPriceAmount = String(parsed.amount);
+        node.dataset.kufarOriginalPriceUnit = parsed.unitSuffix;
       }
 
       const amountByn = Number.parseFloat(
@@ -210,7 +219,8 @@
       const converted = convertFromBYN(amountByn, targetRate);
       const formatted = formatDisplayPrice(converted, selectedCurrency);
       if (formatted) {
-        node.textContent = formatted;
+        const unitSuffix = node.dataset.kufarOriginalPriceUnit || "";
+        node.textContent = formatted + unitSuffix;
       }
     }
   }

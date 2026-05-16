@@ -15,18 +15,17 @@ const ALL_DOMAINS_HOST = "www.kufar.by";
 
 const DOMAIN_REGISTRY = [
   {
+    host: ALL_DOMAINS_HOST,
+    label: "Везде",
+    supported: false,
+    defaultEnabled: false,
+    controlsSupportedDomains: true,
+  },
+  {
     host: "auto.kufar.by",
     label: "Авто",
     supported: true,
     defaultEnabled: true,
-  },
-  {
-    host: ALL_DOMAINS_HOST,
-    label: "Везде",
-    displayHost: "kufar.by",
-    supported: false,
-    defaultEnabled: false,
-    controlsSupportedDomains: true,
   },
   {
     host: "re.kufar.by",
@@ -237,8 +236,10 @@ function renderDomains() {
     checkbox.disabled = isDomainCheckboxDisabled(entry);
 
     text.textContent = entry.label;
-    meta.textContent = entry.displayHost || entry.host;
-    text.appendChild(meta);
+    if (!entry.controlsSupportedDomains) {
+      meta.textContent = entry.displayHost || entry.host;
+      text.appendChild(meta);
+    }
 
     label.appendChild(checkbox);
     label.appendChild(text);
