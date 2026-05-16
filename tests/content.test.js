@@ -118,6 +118,22 @@ describe("content/kufar.js", () => {
     resolve(process.cwd(), "examples", "real_estate", "filter_page.html"),
     "utf8",
   );
+  const travelIndexHtml = readFileSync(
+    resolve(process.cwd(), "examples", "travel", "index_page.html"),
+    "utf8",
+  );
+  const travelFilterHtml = readFileSync(
+    resolve(process.cwd(), "examples", "travel", "filter_page.html"),
+    "utf8",
+  );
+  const travelItemV1Html = readFileSync(
+    resolve(process.cwd(), "examples", "travel", "item_page_v1.html"),
+    "utf8",
+  );
+  const travelItemV2Html = readFileSync(
+    resolve(process.cwd(), "examples", "travel", "item_page_v2.html"),
+    "utf8",
+  );
 
   it("converts BYN text on auto.kufar.by", async () => {
     const session = await bootstrapContentScript(indexHtml, {
@@ -411,6 +427,106 @@ describe("content/kufar.js", () => {
         expect(perMeterNode.dataset.kufarOriginalPriceUnit).toBe(" / м²");
         expect(perMeterNode.textContent).toContain("$");
         expect(perMeterNode.textContent).toContain("/ м²");
+      } finally {
+        session.cleanup();
+      }
+    });
+  });
+
+  describe("travel.kufar.by", () => {
+    it("converts BYN text on travel index page and preserves от prefix", async () => {
+      const session = await bootstrapContentScript(
+        travelIndexHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { "travel.kufar.by": true },
+        },
+        { url: "https://travel.kufar.by/" },
+      );
+
+      try {
+        const convertedNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount]",
+        );
+        expect(convertedNode).toBeTruthy();
+        expect(convertedNode.textContent).toContain("$");
+
+        const prefixedNode = Array.from(
+          session.dom.window.document.querySelectorAll(
+            "[data-kufar-original-price-text]",
+          ),
+        ).find((node) =>
+          (node.dataset.kufarOriginalPriceText || "").startsWith("от "),
+        );
+        expect(prefixedNode).toBeTruthy();
+        expect(prefixedNode.textContent.startsWith("от ")).toBe(true);
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts BYN text on travel filter page", async () => {
+      const session = await bootstrapContentScript(
+        travelFilterHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { "travel.kufar.by": true },
+        },
+        { url: "https://travel.kufar.by/" },
+      );
+
+      try {
+        const convertedNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount]",
+        );
+        expect(convertedNode).toBeTruthy();
+        expect(convertedNode.textContent).toContain("$");
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts BYN text on travel item page v1", async () => {
+      const session = await bootstrapContentScript(
+        travelItemV1Html,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { "travel.kufar.by": true },
+        },
+        { url: "https://travel.kufar.by/" },
+      );
+
+      try {
+        const convertedNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount]",
+        );
+        expect(convertedNode).toBeTruthy();
+        expect(convertedNode.textContent).toContain("$");
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts BYN text on travel item page v2", async () => {
+      const session = await bootstrapContentScript(
+        travelItemV2Html,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { "travel.kufar.by": true },
+        },
+        { url: "https://travel.kufar.by/" },
+      );
+
+      try {
+        const convertedNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount]",
+        );
+        expect(convertedNode).toBeTruthy();
+        expect(convertedNode.textContent).toContain("$");
       } finally {
         session.cleanup();
       }

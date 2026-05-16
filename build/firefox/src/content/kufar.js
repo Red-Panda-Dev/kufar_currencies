@@ -5,7 +5,7 @@
     { host: "www.kufar.by", supported: false, defaultEnabled: false },
     { host: "auto.kufar.by", supported: true, defaultEnabled: true },
     { host: "re.kufar.by", supported: true, defaultEnabled: true },
-    { host: "travel.kufar.by", supported: false, defaultEnabled: false },
+    { host: "travel.kufar.by", supported: true, defaultEnabled: true },
     { host: "kufar.by", supported: false, defaultEnabled: false },
   ];
 
@@ -80,7 +80,11 @@
       return null;
     }
 
-    const withoutPrefix = normalized.replace(/^от\s+/i, "");
+    const prefixMatch = normalized.match(/^(от\s+)/i);
+    const prefix = prefixMatch ? "от " : "";
+    const withoutPrefix = prefixMatch
+      ? normalized.slice(prefixMatch[0].length)
+      : normalized;
     const match = withoutPrefix.match(
       /(^|\D)(\d[\d\s]*([.,]\d+)?)\s*(BYN\b|бел\.\s*руб\.?|[рp]\.?(?=\s|$))/i,
     );
@@ -97,6 +101,10 @@
     const matchedEnd = match.index + match[0].length;
     const remainder = withoutPrefix.slice(matchedEnd).trim();
     const unitSuffix = remainder ? ` ${remainder}` : "";
+
+    if (prefix) {
+      return { amount: parsed, unitSuffix, prefix };
+    }
 
     return { amount: parsed, unitSuffix };
   }
@@ -207,6 +215,7 @@
         node.dataset.kufarOriginalPriceText = node.textContent;
         node.dataset.kufarOriginalPriceAmount = String(parsed.amount);
         node.dataset.kufarOriginalPriceUnit = parsed.unitSuffix;
+        node.dataset.kufarOriginalPricePrefix = parsed.prefix || "";
       }
 
       const amountByn = Number.parseFloat(
@@ -220,7 +229,8 @@
       const formatted = formatDisplayPrice(converted, selectedCurrency);
       if (formatted) {
         const unitSuffix = node.dataset.kufarOriginalPriceUnit || "";
-        node.textContent = formatted + unitSuffix;
+        const prefix = node.dataset.kufarOriginalPricePrefix || "";
+        node.textContent = prefix + formatted + unitSuffix;
       }
     }
   }
