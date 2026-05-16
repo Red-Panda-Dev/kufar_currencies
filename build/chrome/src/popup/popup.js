@@ -36,8 +36,8 @@ const DOMAIN_REGISTRY = [
   {
     host: "travel.kufar.by",
     label: "Путешествия",
-    supported: false,
-    defaultEnabled: false,
+    supported: true,
+    defaultEnabled: true,
   },
   {
     host: "kufar.by",
