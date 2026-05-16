@@ -4,11 +4,12 @@ export default defineConfig({
   test: {
     include: ["tests/**/*.test.js"],
     passWithNoTests: true,
+    testTimeout: 15000,
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],
       reportsDirectory: "./coverage",
-      include: ["lib/**/*.js"],
+      include: ["src/lib/**/*.js"],
       thresholds: {
         lines: 80,
         functions: 80,

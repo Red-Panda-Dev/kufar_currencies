@@ -14,7 +14,7 @@ import {
   formatTime,
   parseBynPrice,
   parseRates,
-} from "../lib/rates.js";
+} from "../src/lib/rates.js";
 
 const fixture = JSON.parse(
   readFileSync(
@@ -57,6 +57,12 @@ describe("conversion helpers", () => {
     const parsed = parseRates(fixture);
     const amount = convertFromBYN(3.7556, parsed.rates.RUB);
     expect(amount).toBeCloseTo(100, 5);
+  });
+
+  it("convertFromBYN returns null for invalid rateInfo", () => {
+    expect(convertFromBYN(100, null)).toBeNull();
+    expect(convertFromBYN(100, { scale: 0, rate: 1 })).toBeNull();
+    expect(convertFromBYN(100, { scale: 1, rate: -1 })).toBeNull();
   });
 });
 
@@ -144,5 +150,24 @@ describe("price parsing and formatting", () => {
     expect(CURRENCY_SYMBOLS.USD).toBe("$");
     expect(CURRENCY_SYMBOLS.EUR).toBe("€");
     expect(CURRENCY_SYMBOLS.RUB).toBe("RUB");
+  });
+
+  it("parseBynPrice returns null for non-string input", () => {
+    expect(parseBynPrice(null)).toBeNull();
+    expect(parseBynPrice(123)).toBeNull();
+  });
+
+  it("formatDisplayPrice returns null for invalid input", () => {
+    expect(formatDisplayPrice(NaN, "USD")).toBeNull();
+    expect(formatDisplayPrice(100, "GBP")).toBeNull();
+  });
+
+  it("formatRate returns dash for non-finite rate", () => {
+    expect(formatRate(NaN)).toBe("-");
+    expect(formatRate(Infinity)).toBe("-");
+  });
+
+  it("formatRateLabel returns empty for non-target currency", () => {
+    expect(formatRateLabel("GBP", 1)).toBe("");
   });
 });
