@@ -4,7 +4,7 @@
   const DOMAIN_REGISTRY = [
     { host: "auto.kufar.by", supported: true, defaultEnabled: true },
     { host: "www.kufar.by", supported: false, defaultEnabled: false },
-    { host: "re.kufar.by", supported: false, defaultEnabled: false },
+    { host: "re.kufar.by", supported: true, defaultEnabled: true },
     { host: "travel.kufar.by", supported: false, defaultEnabled: false },
     { host: "kufar.by", supported: false, defaultEnabled: false },
   ];
@@ -136,6 +136,7 @@
     const safeContainers = document.querySelectorAll(
       [
         "a[data-testid='kufar-ad']",
+        "a[data-testid^='kufar-realty-card']",
         "#adview_content",
         "[data-name='ad-view-fixed-footer']",
         "[data-name='ad-view-sidebar']",
