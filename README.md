@@ -302,11 +302,9 @@ kufar_currencies/
 
 ## Ссылки
 
-
 [Расширение в Addons Mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/kufar-by-%D0%B2%D0%B0%D0%BB%D1%8E%D1%82%D1%8B/)
 
 [Расширение в Chrome Webstore](#)
-
 
 ---
 
