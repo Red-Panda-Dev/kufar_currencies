@@ -29,7 +29,7 @@ async function buildFirefox() {
 
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
 
-  const copyTargets = ["src", "icons", "examples/nbrb_response.json"];
+  const copyTargets = ["src", "icons"];
 
   await Promise.all(copyTargets.map((target) => copyIfExists(target)));
   await writeFile(
