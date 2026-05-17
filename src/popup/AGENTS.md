@@ -15,12 +15,12 @@ popup/
 
 ## Local boundaries and invariants
 
-- **ES module with imports from `src/lib/rates.js`.** Unlike content script, popup has full ESM support. Uses `convert`, `formatDisplayPrice`, `formatRate`, `formatRateLabel`, `formatDate`, `formatTime`.
+- **ES module with imports from `src/lib/rates.js`.** Unlike content script, popup has full ESM support. Uses `DISPLAY_CURRENCIES`, `TARGET_CURRENCIES`, `convert`, `formatDisplayPrice`, `formatRate`, `formatRateLabel`, `formatDate`, `formatTime`.
 - **Communicates with background via `browser.runtime.sendMessage`.** Actions: `getRates`, `refreshRates`, `ensureRates`. Never fetches NBRB directly.
 - **`DOMAIN_REGISTRY` is a superset** of `src/content/kufar.js`: includes a "Везде" master toggle with `controlsSupportedDomains: true`. Must stay in sync.
 - **No `innerHTML`.** Use `textContent`, `createElement`, `appendChild`.
 - **CSS uses custom properties** (`--bg`, `--text`, `--accent`, etc.) with light/dark variants via `prefers-color-scheme`. Never hardcode colors.
-- **Converter uses direct `convert(amount, from, to, rates)`** — popup has fresh rates from background, unlike content script which reads stored original amounts.
+- **Converter uses direct `convert(amount, rateInfo)`** — popup has fresh rates from background, unlike content script which reads stored original amounts.
 
 ## Safe change rules
 

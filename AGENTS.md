@@ -8,14 +8,14 @@ Manifest V3 WebExtension (Chrome + Firefox) that replaces BYN prices on Kufar pa
 
 ```
 src/
-├── background.js              # Network layer, cache, message handler
+├── background.js              # Service worker: network, cache, alarms, message handler
 ├── lib/
 │   └── rates.js               # Pure parsing/conversion/formatting logic
 ├── content/
 │   └── kufar.js               # Self-contained IIFE — DOM price conversion
 └── popup/
     ├── popup.html             # Popup markup
-    ├── popup.css              # Popup styles
+    ├── popup.css              # Popup styles (light/dark via prefers-color-scheme)
     └── popup.js               # Popup logic, imports lib/rates.js
 tests/
 ├── parse.test.js              # Unit tests for lib/rates.js
@@ -23,7 +23,7 @@ tests/
 scripts/
 ├── build-chrome.mjs           # Chrome build (strips gecko keys, copies files)
 ├── build-firefox.mjs          # Firefox build
-└── build-utils.mjs            # Shared build helpers
+└── build-utils.mjs            # Shared: createZip, removeAgentsFiles
 examples/
 ├── auto/                      # HTML fixtures from auto.kufar.by
 ├── real_estate/               # HTML fixtures from re.kufar.by
@@ -88,9 +88,9 @@ Coverage thresholds: 80% lines/functions/branches/statements for `src/lib/**/*.j
 
 ## Repository-specific gotchas
 
-- MVP supports only `auto.kufar.by`. Other Kufar domains are registered but marked `supported: false`.
 - `src/content/kufar.js` duplicates `parseBynPrice`, `convertFromBYN`, `formatDisplayPrice` from `src/lib/rates.js` because content scripts cannot use ES module imports. Keep these in sync.
-- `DOMAIN_REGISTRY` exists in two files (`src/content/kufar.js:4` and `src/popup/popup.js:13`). Changes must be applied to both.
+- `DOMAIN_REGISTRY` exists in two files (`src/content/kufar.js:4` and `src/popup/popup.js:16`). Changes must be applied to both.
 - `NEGATIVE_LABELS` in content script ("Договорная", "Бесплатно", etc.) prevent conversion of non-price text that coincidentally matches BYN patterns.
 - `browser ??= chrome` shim appears in `src/background.js`, `src/content/kufar.js`, and `src/popup/popup.js` for Chrome compatibility.
 - `manifest.json` is Firefox-primary. Chrome build transforms it at build time (strips `browser_specific_settings`, converts `background.scripts` → `background.service_worker`).
+- Build scripts strip `AGENTS.md` files from release packages (`removeAgentsFiles` in `scripts/build-utils.mjs`).
