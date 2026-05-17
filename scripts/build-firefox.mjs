@@ -1,6 +1,10 @@
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { removeAgentsFiles, createZip } from "./build-utils.mjs";
+import {
+  removeAgentsFiles,
+  createZip,
+  buildCopyFilter,
+} from "./build-utils.mjs";
 
 const rootDir = process.cwd();
 const firefoxDir = path.join(rootDir, "build", "firefox");
@@ -13,7 +17,7 @@ async function copyIfExists(relativePath) {
   try {
     await cp(source, destination, {
       recursive: true,
-      filter: (src) => !src.endsWith("logo_raw.png"),
+      filter: buildCopyFilter,
     });
   } catch (error) {
     if (error && error.code === "ENOENT") {

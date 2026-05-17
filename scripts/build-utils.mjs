@@ -5,6 +5,16 @@ import path from "node:path";
 
 const execFileAsync = promisify(execFile);
 
+const ICON_FILE_RE = /^icon\.svg$|^icon-\d{2,3}\.png$/;
+
+export function buildCopyFilter(src) {
+  const parts = src.split(path.sep);
+  const iconsIdx = parts.lastIndexOf("icons");
+  if (iconsIdx === -1) return true;
+  if (iconsIdx === parts.length - 1) return true;
+  return ICON_FILE_RE.test(parts[parts.length - 1]);
+}
+
 export async function removeAgentsFiles(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
