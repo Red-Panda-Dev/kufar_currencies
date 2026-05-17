@@ -5,9 +5,7 @@
   "description": "Замена цен на Kufar.by из BYN в выбранную валюту с курсами НБРБ.",
   "permissions": ["alarms", "storage"],
   "host_permissions": [
-    "https://api.nbrb.by/*",
-    "https://kufar.by/*",
-    "https://*.kufar.by/*"
+    "https://api.nbrb.by/*"
   ],
   "background": {
     "scripts": ["src/background.js"],
@@ -24,7 +22,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://kufar.by/*", "https://*.kufar.by/*"],
+      "matches": ["https://*.kufar.by/*"],
       "js": ["src/content/kufar.js"],
       "run_at": "document_idle"
     }
