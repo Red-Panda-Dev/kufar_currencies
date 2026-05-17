@@ -11,7 +11,10 @@ async function copyIfExists(relativePath) {
   const source = path.join(rootDir, relativePath);
   const destination = path.join(firefoxDir, relativePath);
   try {
-    await cp(source, destination, { recursive: true });
+    await cp(source, destination, {
+      recursive: true,
+      filter: (src) => !src.endsWith("logo_raw.png"),
+    });
   } catch (error) {
     if (error && error.code === "ENOENT") {
       return;

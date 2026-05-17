@@ -8,9 +8,7 @@
     "storage"
   ],
   "host_permissions": [
-    "https://api.nbrb.by/*",
-    "https://kufar.by/*",
-    "https://*.kufar.by/*"
+    "https://api.nbrb.by/*"
   ],
   "background": {
     "scripts": [
@@ -30,7 +28,6 @@
   "content_scripts": [
     {
       "matches": [
-        "https://kufar.by/*",
         "https://*.kufar.by/*"
       ],
       "js": [
