@@ -1,5 +1,7 @@
 # Kufar.by Валюты
 
+[![](icons/marquee_promo_tile_raw.png)](icons/marquee_promo_tile_raw.png)
+
 Браузерное расширение (Manifest V3) для Firefox и Chrome-based браузеров, которое автоматически заменяет цены на Kufar.by из белорусских рублей (BYN) в выбранную валюту: USD, EUR или RUB. Курсы берутся из публичного API Национального банка Республики Беларусь.
 
 Текущая версия: **0.4.0**
