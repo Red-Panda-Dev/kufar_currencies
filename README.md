@@ -1,6 +1,6 @@
 # Kufar.by Валюты
 
-![Mozilla Add-on Users](https://img.shields.io/amo/users/av-by-валюты?logo=firefoxbrowser&logoColor=#FF7139)
+![Mozilla Add-on Users](https://img.shields.io/amo/users/kufar-by-валюты?logo=firefoxbrowser&logoColor=#FF7139)
 ![Chrome Web Store Users](https://img.shields.io/chrome-web-store/users/cflihkpcbnofjhjaaidfnblbpkhnpogl?logo=chromewebstore&logoColor=#4285F4)
 
 [![](icons/marquee_promo_tile_raw.png)](icons/marquee_promo_tile_raw.png)
