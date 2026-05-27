@@ -11,7 +11,7 @@ import {
 
 globalThis.browser ??= globalThis.chrome;
 
-const ALL_DOMAINS_HOST = "www.kufar.by";
+const ALL_DOMAINS_HOST = "__all__";
 
 const DOMAIN_REGISTRY = [
   {
@@ -20,6 +20,13 @@ const DOMAIN_REGISTRY = [
     supported: false,
     defaultEnabled: false,
     controlsSupportedDomains: true,
+  },
+  {
+    host: "www.kufar.by",
+    label: "Основной",
+    supported: true,
+    defaultEnabled: false,
+    displayHost: "kufar.by",
   },
   {
     host: "auto.kufar.by",
@@ -38,12 +45,6 @@ const DOMAIN_REGISTRY = [
     label: "Путешествия",
     supported: true,
     defaultEnabled: true,
-  },
-  {
-    host: "kufar.by",
-    label: "Куфар (основной)",
-    supported: false,
-    defaultEnabled: false,
   },
 ];
 
@@ -73,14 +74,29 @@ function normalizeConverterCurrency(code) {
   return TARGET_CURRENCIES.includes(code) ? code : "USD";
 }
 
-function mergeDomainSettings(storedSettings) {
-  const merged = { ...DEFAULT_DOMAIN_SETTINGS };
+function migrateDomainSettings(storedSettings) {
   if (!storedSettings || typeof storedSettings !== "object") {
+    return storedSettings;
+  }
+  if (!("__all__" in storedSettings) && "www.kufar.by" in storedSettings) {
+    return {
+      ...storedSettings,
+      __all__: storedSettings["www.kufar.by"],
+      "www.kufar.by": false,
+    };
+  }
+  return storedSettings;
+}
+
+function mergeDomainSettings(storedSettings) {
+  const migrated = migrateDomainSettings(storedSettings);
+  const merged = { ...DEFAULT_DOMAIN_SETTINGS };
+  if (!migrated || typeof migrated !== "object") {
     return merged;
   }
   for (const item of DOMAIN_REGISTRY) {
-    if (typeof storedSettings[item.host] === "boolean") {
-      merged[item.host] = storedSettings[item.host];
+    if (typeof migrated[item.host] === "boolean") {
+      merged[item.host] = migrated[item.host];
     }
   }
   return merged;
@@ -299,6 +315,13 @@ async function readStoredState() {
     selectedCurrency === "BYN" ? converterCurrency : selectedCurrency,
   );
   domainSettings = mergeDomainSettings(state.domainSettings);
+  if (
+    state.domainSettings &&
+    typeof state.domainSettings === "object" &&
+    !("__all__" in state.domainSettings)
+  ) {
+    await browser.storage.local.set({ domainSettings });
+  }
 }
 
 async function ensureInitialRates() {

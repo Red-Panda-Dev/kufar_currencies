@@ -2,11 +2,15 @@
   globalThis.browser ??= globalThis.chrome;
 
   const DOMAIN_REGISTRY = [
-    { host: "www.kufar.by", supported: false, defaultEnabled: false },
+    {
+      host: "www.kufar.by",
+      supported: true,
+      defaultEnabled: false,
+      aliases: ["kufar.by"],
+    },
     { host: "auto.kufar.by", supported: true, defaultEnabled: true },
     { host: "re.kufar.by", supported: true, defaultEnabled: true },
     { host: "travel.kufar.by", supported: true, defaultEnabled: true },
-    { host: "kufar.by", supported: false, defaultEnabled: false },
   ];
 
   const DEFAULT_DOMAIN_SETTINGS = DOMAIN_REGISTRY.reduce((result, item) => {
@@ -32,13 +36,26 @@
   }
 
   function mergeDomainSettings(storedSettings) {
+    let migrated = storedSettings;
+    if (
+      migrated &&
+      typeof migrated === "object" &&
+      !("__all__" in migrated) &&
+      "www.kufar.by" in migrated
+    ) {
+      migrated = {
+        ...migrated,
+        __all__: migrated["www.kufar.by"],
+        "www.kufar.by": false,
+      };
+    }
     const merged = { ...DEFAULT_DOMAIN_SETTINGS };
-    if (!storedSettings || typeof storedSettings !== "object") {
+    if (!migrated || typeof migrated !== "object") {
       return merged;
     }
     for (const item of DOMAIN_REGISTRY) {
-      if (typeof storedSettings[item.host] === "boolean") {
-        merged[item.host] = storedSettings[item.host];
+      if (typeof migrated[item.host] === "boolean") {
+        merged[item.host] = migrated[item.host];
       }
     }
     return merged;
@@ -51,11 +68,14 @@
     } catch {
       return false;
     }
-    const entry = DOMAIN_REGISTRY.find((item) => item.host === host);
+    const entry = DOMAIN_REGISTRY.find(
+      (item) =>
+        item.host === host || (item.aliases && item.aliases.includes(host)),
+    );
     if (!entry || !entry.supported) {
       return false;
     }
-    return Boolean(domainSettings[host]);
+    return Boolean(domainSettings[entry.host]);
   }
 
   function parseBynPrice(value) {
@@ -152,6 +172,7 @@
     const safeContainers = document.querySelectorAll(
       [
         "a[data-testid='kufar-ad']",
+        "a[data-testid='shop-page-kufar-ad']",
         "a[data-testid^='kufar-realty-card']",
         "#adview_content",
         "[data-name='ad-view-fixed-footer']",
