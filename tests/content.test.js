@@ -134,6 +134,22 @@ describe("content/kufar.js", () => {
     resolve(process.cwd(), "examples", "travel", "item_page_v2.html"),
     "utf8",
   );
+  const mainCatalogIndexHtml = readFileSync(
+    resolve(process.cwd(), "examples", "main", "catalog_index.html"),
+    "utf8",
+  );
+  const mainCatalogFilterHtml = readFileSync(
+    resolve(process.cwd(), "examples", "main", "catalog_filter.html"),
+    "utf8",
+  );
+  const mainItemDetailsHtml = readFileSync(
+    resolve(process.cwd(), "examples", "main", "item_details.html"),
+    "utf8",
+  );
+  const mainUserItemsListHtml = readFileSync(
+    resolve(process.cwd(), "examples", "main", "user_items_list.html"),
+    "utf8",
+  );
 
   it("converts BYN text on auto.kufar.by", async () => {
     const session = await bootstrapContentScript(indexHtml, {
@@ -201,6 +217,32 @@ describe("content/kufar.js", () => {
         ratesData: sampleRates,
         selectedCurrency: "USD",
         domainSettings: { "auto.kufar.by": true },
+      },
+      { url: "https://unknown.kufar.by/" },
+    );
+
+    try {
+      expect(
+        session.browserMock.messages.some(
+          (msg) => msg.action === "ensureRates",
+        ),
+      ).toBe(false);
+      const tracked = session.dom.window.document.querySelectorAll(
+        "[data-kufar-original-price-text]",
+      );
+      expect(tracked.length).toBe(0);
+    } finally {
+      session.cleanup();
+    }
+  });
+
+  it("does not run conversion on Основной domain when disabled", async () => {
+    const session = await bootstrapContentScript(
+      indexHtml,
+      {
+        ratesData: sampleRates,
+        selectedCurrency: "USD",
+        domainSettings: { __all__: false, "www.kufar.by": false },
       },
       { url: "https://www.kufar.by/" },
     );
@@ -519,6 +561,131 @@ describe("content/kufar.js", () => {
           domainSettings: { "travel.kufar.by": true },
         },
         { url: "https://travel.kufar.by/" },
+      );
+
+      try {
+        const convertedNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount]",
+        );
+        expect(convertedNode).toBeTruthy();
+        expect(convertedNode.textContent).toContain("$");
+      } finally {
+        session.cleanup();
+      }
+    });
+  });
+
+  describe("www.kufar.by (Основной)", () => {
+    it("converts BYN text on catalog index page when enabled", async () => {
+      const session = await bootstrapContentScript(
+        mainCatalogIndexHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { __all__: false, "www.kufar.by": true },
+        },
+        { url: "https://www.kufar.by/" },
+      );
+
+      try {
+        const convertedNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount]",
+        );
+        expect(convertedNode).toBeTruthy();
+        expect(convertedNode.textContent).toContain("$");
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts BYN text on catalog filter page preserving от prefix", async () => {
+      const session = await bootstrapContentScript(
+        mainCatalogFilterHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { __all__: false, "www.kufar.by": true },
+        },
+        { url: "https://www.kufar.by/" },
+      );
+
+      try {
+        const convertedNode = session.dom.window.document.querySelector(
+          "[data-kufar-original-price-amount]",
+        );
+        expect(convertedNode).toBeTruthy();
+        expect(convertedNode.textContent).toContain("$");
+
+        const prefixedNode = Array.from(
+          session.dom.window.document.querySelectorAll(
+            "[data-kufar-original-price-text]",
+          ),
+        ).find((node) =>
+          (node.dataset.kufarOriginalPriceText || "").startsWith("от "),
+        );
+        expect(prefixedNode).toBeTruthy();
+        expect(prefixedNode.textContent.startsWith("от ")).toBe(true);
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts item detail page prices", async () => {
+      const session = await bootstrapContentScript(
+        mainItemDetailsHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { __all__: false, "www.kufar.by": true },
+        },
+        { url: "https://www.kufar.by/" },
+      );
+
+      try {
+        const sidebarPrice = session.dom.window.document.querySelector(
+          ".styles_main__eFbJH",
+        );
+        expect(sidebarPrice).toBeTruthy();
+        expect(sidebarPrice.dataset.kufarOriginalPriceText).toBe("1 150 р.");
+        expect(sidebarPrice.textContent).toContain("$");
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts user items list page prices", async () => {
+      const session = await bootstrapContentScript(
+        mainUserItemsListHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { __all__: false, "www.kufar.by": true },
+        },
+        { url: "https://www.kufar.by/" },
+      );
+
+      try {
+        const convertedNodes = session.dom.window.document.querySelectorAll(
+          "[data-kufar-original-price-amount]",
+        );
+        expect(convertedNodes.length).toBeGreaterThan(0);
+        for (const node of convertedNodes) {
+          expect(node.textContent).toContain("$");
+        }
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts on kufar.by alias when www.kufar.by is enabled", async () => {
+      const session = await bootstrapContentScript(
+        mainCatalogIndexHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { __all__: false, "www.kufar.by": true },
+        },
+        { url: "https://kufar.by/" },
       );
 
       try {
