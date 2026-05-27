@@ -6,7 +6,7 @@ Manifest V3 WebExtension (Chrome + Firefox) that replaces BYN prices on Kufar pa
 
 ## Repo shape
 
-```
+```text
 src/
 ├── background.js              # Service worker: network, cache, alarms, message handler
 ├── lib/
@@ -19,15 +19,17 @@ src/
     └── popup.js               # Popup logic, imports lib/rates.js
 tests/
 ├── parse.test.js              # Unit tests for lib/rates.js
+├── background.test.js          # Unit tests for background.js
 └── content.test.js            # JSDOM integration tests for content script
 scripts/
-├── build-chrome.mjs           # Chrome build (strips gecko keys, copies files)
+├── build-chrome.mjs           # Chrome build (strips gecko keys, converts to service_worker)
 ├── build-firefox.mjs          # Firefox build
 └── build-utils.mjs            # Shared: createZip, removeAgentsFiles
 examples/
 ├── auto/                      # HTML fixtures from auto.kufar.by
 ├── real_estate/               # HTML fixtures from re.kufar.by
 ├── travel/                    # HTML fixtures from travel.kufar.by
+├── main/                      # HTML fixtures from kufar.by
 ├── nbrb_response.json         # Sample NBRB API response fixture
 └── screenshots/               # Extension screenshots
 icons/                         # Extension icons (SVG + PNG)
@@ -67,8 +69,9 @@ manifest.json                  # Extension manifest (MV3, Firefox primary)
 
 ```bash
 npm test                                # All tests + coverage
-npx vitest run tests/parse.test.js     # Unit tests for lib/rates.js
-npx vitest run tests/content.test.js    # JSDOM tests for content script
+npx vitest run tests/parse.test.js       # Unit tests for lib/rates.js
+npx vitest run tests/background.test.js  # Unit tests for background.js
+npx vitest run tests/content.test.js      # JSDOM tests for content script
 npm run format:check                    # Prettier check
 npm run format                          # Auto-fix formatting
 make build                              # lint + test + package both browsers
@@ -76,7 +79,7 @@ make build-chrome                       # lint + test + package Chrome only
 make build-firefox                      # lint + test + package Firefox only
 ```
 
-Coverage thresholds: 80% lines/functions/branches/statements for `src/lib/**/*.js` (see `vitest.config.js`).
+Coverage thresholds: 80% lines/functions/branches/statements for `src/lib/**/*.js` and `src/background.js` (see `vitest.config.js`).
 
 ## Key docs
 
@@ -90,7 +93,7 @@ Coverage thresholds: 80% lines/functions/branches/statements for `src/lib/**/*.j
 
 - `src/content/kufar.js` duplicates `parseBynPrice`, `convertFromBYN`, `formatDisplayPrice` from `src/lib/rates.js` because content scripts cannot use ES module imports. Keep these in sync.
 - `DOMAIN_REGISTRY` exists in two files (`src/content/kufar.js:4` and `src/popup/popup.js:16`). Changes must be applied to both.
-- `NEGATIVE_LABELS` in content script ("Договорная", "Бесплатно", etc.) prevent conversion of non-price text that coincidentally matches BYN patterns.
+- `NEGATIVE_LABELS` in content script ("Договорная", "Бесплатно", "Обмен", "Цена не указана") prevent conversion of non-price text that coincidentally matches BYN patterns.
 - `browser ??= chrome` shim appears in `src/background.js`, `src/content/kufar.js`, and `src/popup/popup.js` for Chrome compatibility.
 - `manifest.json` is Firefox-primary. Chrome build transforms it at build time (strips `browser_specific_settings`, converts `background.scripts` → `background.service_worker`).
 - Build scripts strip `AGENTS.md` files from release packages (`removeAgentsFiles` in `scripts/build-utils.mjs`).

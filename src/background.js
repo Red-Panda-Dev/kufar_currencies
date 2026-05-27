@@ -2,9 +2,9 @@ import { parseRates } from "./lib/rates.js";
 
 globalThis.browser ??= globalThis.chrome;
 
-const NBRB_URL = "https://api.nbrb.by/exrates/rates?periodicity=0";
-const REFRESH_MINUTES = 240;
-const FETCH_TIMEOUT_MS = 15000;
+export const NBRB_URL = "https://api.nbrb.by/exrates/rates?periodicity=0";
+export const REFRESH_MINUTES = 240;
+export const FETCH_TIMEOUT_MS = 15000;
 
 let fetchInProgress = null;
 
@@ -19,7 +19,7 @@ function buildRatesData(parsed) {
   };
 }
 
-async function fetchRatesFromNbrb() {
+export async function fetchRatesFromNbrb() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -55,7 +55,7 @@ async function fetchRatesFromNbrb() {
   }
 }
 
-async function refreshRates({ force = false } = {}) {
+export async function refreshRates({ force = false } = {}) {
   if (!force && fetchInProgress) {
     return fetchInProgress;
   }
@@ -67,7 +67,7 @@ async function refreshRates({ force = false } = {}) {
   return fetchInProgress;
 }
 
-async function ensureRates() {
+export async function ensureRates() {
   const { ratesData } = await browser.storage.local.get(["ratesData"]);
   if (ratesData) {
     return ratesData;
