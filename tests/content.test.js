@@ -138,12 +138,24 @@ describe("content/kufar.js", () => {
     resolve(process.cwd(), "examples", "main", "catalog_index.html"),
     "utf8",
   );
+  const mainCatalogIndexV2Html = readFileSync(
+    resolve(process.cwd(), "examples", "main", "catalog_index_v2.html"),
+    "utf8",
+  );
   const mainCatalogFilterHtml = readFileSync(
     resolve(process.cwd(), "examples", "main", "catalog_filter.html"),
     "utf8",
   );
+  const mainCatalogFilterV2Html = readFileSync(
+    resolve(process.cwd(), "examples", "main", "catalog_filter_v2.html"),
+    "utf8",
+  );
   const mainItemDetailsHtml = readFileSync(
     resolve(process.cwd(), "examples", "main", "item_details.html"),
+    "utf8",
+  );
+  const mainItemDetailsImageHtml = readFileSync(
+    resolve(process.cwd(), "examples", "main", "item_details_image.html"),
     "utf8",
   );
   const mainUserItemsListHtml = readFileSync(
@@ -598,6 +610,47 @@ describe("content/kufar.js", () => {
       }
     });
 
+    it("converts prices in Товары и услуги от компаний block", async () => {
+      const session = await bootstrapContentScript(
+        mainCatalogIndexV2Html,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { __all__: false, "www.kufar.by": true },
+        },
+        { url: "https://www.kufar.by/" },
+      );
+
+      try {
+        const { document } = session.dom.window;
+        const multiRegionBlock = document.createElement("div");
+        multiRegionBlock.setAttribute("data-testid", "kufar-multiregion-block");
+
+        const heading = document.createElement("h2");
+        heading.textContent = "Товары и услуги от компаний";
+        multiRegionBlock.appendChild(heading);
+
+        const priceText = document.createElement("p");
+        priceText.className = "styles_price__aVxZc";
+        const firstPrice = document.createElement("span");
+        firstPrice.textContent = "25 р.";
+        priceText.appendChild(firstPrice);
+        multiRegionBlock.appendChild(priceText);
+
+        document.body.appendChild(multiRegionBlock);
+
+        for (let i = 0; i < 3; i++) {
+          await new Promise((r) => setTimeout(r, 0));
+        }
+
+        expect(firstPrice).toBeTruthy();
+        expect(firstPrice.dataset.kufarOriginalPriceText).toBe("25 р.");
+        expect(firstPrice.textContent).toContain("$");
+      } finally {
+        session.cleanup();
+      }
+    });
+
     it("converts BYN text on catalog filter page preserving от prefix", async () => {
       const session = await bootstrapContentScript(
         mainCatalogFilterHtml,
@@ -630,6 +683,57 @@ describe("content/kufar.js", () => {
       }
     });
 
+    it("converts dynamically added prices in Ранее вы смотрели block on catalog filter v2", async () => {
+      const session = await bootstrapContentScript(
+        mainCatalogFilterV2Html,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { __all__: false, "www.kufar.by": true },
+        },
+        { url: "https://www.kufar.by/l/gruzoperevozki" },
+      );
+
+      try {
+        const { document } = session.dom.window;
+        const section = document.createElement("div");
+        const heading = document.createElement("h2");
+        heading.textContent = "Ранее вы смотрели";
+        section.appendChild(heading);
+
+        const addPrice = (text) => {
+          const wrapper = document.createElement("div");
+          wrapper.className = "styles_price_block__Ql9um";
+
+          const paragraph = document.createElement("p");
+          paragraph.className = "styles_price__aVxZc";
+
+          const span = document.createElement("span");
+          span.textContent = text;
+          paragraph.appendChild(span);
+          wrapper.appendChild(paragraph);
+          section.appendChild(wrapper);
+          return span;
+        };
+
+        const firstPrice = addPrice("300 р.");
+        const secondPrice = addPrice("850 р.");
+
+        document.body.appendChild(section);
+
+        for (let i = 0; i < 3; i++) {
+          await new Promise((r) => setTimeout(r, 0));
+        }
+
+        for (const node of [firstPrice, secondPrice]) {
+          expect(node.dataset.kufarOriginalPriceText).toBeDefined();
+          expect(node.textContent).toContain("$");
+        }
+      } finally {
+        session.cleanup();
+      }
+    });
+
     it("converts item detail page prices", async () => {
       const session = await bootstrapContentScript(
         mainItemDetailsHtml,
@@ -648,6 +752,46 @@ describe("content/kufar.js", () => {
         expect(sidebarPrice).toBeTruthy();
         expect(sidebarPrice.dataset.kufarOriginalPriceText).toBe("1 150 р.");
         expect(sidebarPrice.textContent).toContain("$");
+      } finally {
+        session.cleanup();
+      }
+    });
+
+    it("converts dynamically opened item gallery header price", async () => {
+      const session = await bootstrapContentScript(
+        mainItemDetailsImageHtml,
+        {
+          ratesData: sampleRates,
+          selectedCurrency: "USD",
+          domainSettings: { __all__: false, "www.kufar.by": true },
+        },
+        { url: "https://www.kufar.by/item/1070646431" },
+      );
+
+      try {
+        const { document } = session.dom.window;
+        const header = document.createElement("div");
+        header.className = "styles_gallery_header__newHash";
+
+        const counter = document.createElement("h3");
+        counter.textContent = "2/3";
+        header.appendChild(counter);
+
+        const title = document.createElement("p");
+        const price = document.createElement("span");
+        price.textContent = "300 р.";
+        title.appendChild(price);
+        title.appendChild(document.createTextNode("Животное"));
+        header.appendChild(title);
+
+        document.body.appendChild(header);
+
+        for (let i = 0; i < 3; i++) {
+          await new Promise((r) => setTimeout(r, 0));
+        }
+
+        expect(price.dataset.kufarOriginalPriceText).toBe("300 р.");
+        expect(price.textContent).toContain("$");
       } finally {
         session.cleanup();
       }
