@@ -19,6 +19,25 @@ function buildRatesData(parsed) {
   };
 }
 
+export function mergeCustomRates(ratesData, customRates) {
+  if (!customRates || typeof customRates !== "object") {
+    return ratesData;
+  }
+  const keys = Object.keys(customRates);
+  if (keys.length === 0) {
+    return ratesData;
+  }
+  const merged = { ...ratesData };
+  const rates = { ...merged.rates };
+  for (const code of keys) {
+    if (rates[code] && Number.isFinite(customRates[code])) {
+      rates[code] = { ...rates[code], rate: customRates[code] };
+    }
+  }
+  merged.rates = rates;
+  return merged;
+}
+
 export async function fetchRatesFromNbrb() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -36,8 +55,10 @@ export async function fetchRatesFromNbrb() {
     }
 
     const ratesData = buildRatesData(parsed);
-    await browser.storage.local.set({ ratesData, lastError: null });
-    return ratesData;
+    const { customRates } = await browser.storage.local.get(["customRates"]);
+    const merged = mergeCustomRates(ratesData, customRates);
+    await browser.storage.local.set({ ratesData: merged, lastError: null });
+    return merged;
   } catch (error) {
     const message =
       error?.name === "AbortError"
@@ -106,6 +127,49 @@ browser.runtime.onMessage.addListener((message) => {
       (ratesData) => ({ ok: true, ratesData }),
       () => ({ ok: false }),
     );
+  }
+
+  if (action === "getCustomRates") {
+    return browser.storage.local
+      .get(["customRates"])
+      .then(({ customRates = null }) => ({ ok: true, customRates }));
+  }
+
+  if (action === "saveCustomRate") {
+    const { code, rate } = message;
+    if (typeof code !== "string" || !Number.isFinite(rate) || rate <= 0) {
+      return Promise.resolve({ ok: false });
+    }
+    return browser.storage.local
+      .get(["customRates", "ratesData"])
+      .then(({ customRates = {}, ratesData }) => {
+        const updated = { ...customRates, [code]: rate };
+        const merged = mergeCustomRates(ratesData, updated);
+        return browser.storage.local
+          .set({ customRates: updated, ratesData: merged })
+          .then(() => ({ ok: true, ratesData: merged }));
+      });
+  }
+
+  if (action === "clearCustomRate") {
+    const { code } = message;
+    if (typeof code !== "string") {
+      return Promise.resolve({ ok: false });
+    }
+    return browser.storage.local
+      .get(["customRates", "ratesData"])
+      .then(({ customRates, ratesData }) => {
+        if (!customRates || typeof customRates !== "object") {
+          return { ok: true, ratesData };
+        }
+        const updated = { ...customRates };
+        delete updated[code];
+        const toStore = Object.keys(updated).length === 0 ? null : updated;
+        const merged = mergeCustomRates(ratesData, toStore);
+        return browser.storage.local
+          .set({ customRates: toStore, ratesData: merged })
+          .then(() => ({ ok: true, ratesData: merged }));
+      });
   }
 
   return undefined;

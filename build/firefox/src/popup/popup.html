@@ -13,14 +13,6 @@
         <p id="statusText" class="header__status" aria-live="polite"></p>
       </header>
 
-      <section id="loading" class="loading" aria-live="polite" hidden>
-        Загрузка...
-      </section>
-
-      <section id="error-section" class="error" role="alert" hidden>
-        <p id="errorText"></p>
-      </section>
-
       <section
         id="rates-section"
         class="rates"
@@ -29,6 +21,14 @@
       >
         <h2 id="rates-title" class="visually-hidden">Курсы НБРБ</h2>
         <div id="ratesList"></div>
+      </section>
+
+      <section id="loading" class="loading" aria-live="polite" hidden>
+        <span>Загрузка...</span>
+      </section>
+
+      <section id="error-section" class="error" role="alert" hidden>
+        <span id="errorText"></span>
       </section>
 
       <section
@@ -44,7 +44,8 @@
             class="converter__input"
             type="number"
             min="0"
-            step="0.01"
+            step="any"
+            value="1"
             inputmode="decimal"
             aria-label="Сумма в выбранной валюте"
             placeholder="Сумма"

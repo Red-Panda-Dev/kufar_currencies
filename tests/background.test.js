@@ -71,6 +71,7 @@ const {
   fetchRatesFromNbrb,
   refreshRates,
   ensureRates,
+  mergeCustomRates,
   NBRB_URL,
   REFRESH_MINUTES,
   FETCH_TIMEOUT_MS,
@@ -439,6 +440,158 @@ describe("background.js", () => {
       expect(NBRB_URL).toBe("https://api.nbrb.by/exrates/rates?periodicity=0");
       expect(REFRESH_MINUTES).toBe(240);
       expect(FETCH_TIMEOUT_MS).toBe(15000);
+    });
+  });
+
+  describe("mergeCustomRates", () => {
+    const baseData = {
+      base: "BYN",
+      rates: {
+        USD: { code: "USD", rate: 2.8186, scale: 1 },
+        EUR: { code: "EUR", rate: 3.1, scale: 1 },
+        RUB: { code: "RUB", rate: 3.7556, scale: 100 },
+      },
+    };
+
+    it("returns original when customRates is null", () => {
+      expect(mergeCustomRates(baseData, null)).toBe(baseData);
+    });
+
+    it("returns original when customRates is undefined", () => {
+      expect(mergeCustomRates(baseData, undefined)).toBe(baseData);
+    });
+
+    it("returns original when customRates is empty object", () => {
+      expect(mergeCustomRates(baseData, {})).toBe(baseData);
+    });
+
+    it("overrides matching currency rate", () => {
+      const result = mergeCustomRates(baseData, { USD: 2.85 });
+      expect(result.rates.USD.rate).toBe(2.85);
+      expect(result.rates.EUR.rate).toBe(3.1);
+      expect(result.rates.RUB.rate).toBe(3.7556);
+    });
+
+    it("does not modify original ratesData", () => {
+      const before = baseData.rates.USD.rate;
+      mergeCustomRates(baseData, { USD: 99 });
+      expect(baseData.rates.USD.rate).toBe(before);
+    });
+  });
+
+  describe("custom rate message handlers", () => {
+    const setupRates = () => {
+      mockStorage.state.ratesData = {
+        base: "BYN",
+        rates: {
+          USD: { code: "USD", rate: 2.8186, scale: 1 },
+          EUR: { code: "EUR", rate: 3.1, scale: 1 },
+        },
+      };
+    };
+
+    it("getCustomRates returns null when no custom rates stored", async () => {
+      const [result] = await mockOnMessage.fire({
+        action: "getCustomRates",
+      });
+      expect(result.ok).toBe(true);
+      expect(result.customRates).toBeNull();
+    });
+
+    it("getCustomRates returns stored custom rates", async () => {
+      mockStorage.state.customRates = { USD: 2.85 };
+      const [result] = await mockOnMessage.fire({
+        action: "getCustomRates",
+      });
+      expect(result.ok).toBe(true);
+      expect(result.customRates).toEqual({ USD: 2.85 });
+    });
+
+    it("saveCustomRate stores and merges", async () => {
+      setupRates();
+      const [result] = await mockOnMessage.fire({
+        action: "saveCustomRate",
+        code: "USD",
+        rate: 2.85,
+      });
+      expect(result.ok).toBe(true);
+      expect(result.ratesData.rates.USD.rate).toBe(2.85);
+      expect(mockStorage.state.customRates.USD).toBe(2.85);
+    });
+
+    it("saveCustomRate rejects negative rate", async () => {
+      const [result] = await mockOnMessage.fire({
+        action: "saveCustomRate",
+        code: "USD",
+        rate: -1,
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it("saveCustomRate rejects NaN rate", async () => {
+      const [result] = await mockOnMessage.fire({
+        action: "saveCustomRate",
+        code: "USD",
+        rate: NaN,
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it("saveCustomRate rejects missing code", async () => {
+      const [result] = await mockOnMessage.fire({
+        action: "saveCustomRate",
+        rate: 2.85,
+      });
+      expect(result.ok).toBe(false);
+    });
+
+    it("clearCustomRate removes custom rate and re-merges", async () => {
+      setupRates();
+      mockStorage.state.customRates = { USD: 2.85 };
+
+      const [result] = await mockOnMessage.fire({
+        action: "clearCustomRate",
+        code: "USD",
+      });
+      expect(result.ok).toBe(true);
+      expect(result.ratesData.rates.USD.rate).toBe(2.8186);
+      expect(mockStorage.state.customRates).toBeNull();
+    });
+
+    it("clearCustomRate handles non-existent custom rate", async () => {
+      setupRates();
+      const [result] = await mockOnMessage.fire({
+        action: "clearCustomRate",
+        code: "EUR",
+      });
+      expect(result.ok).toBe(true);
+    });
+
+    it("clearCustomRate rejects missing code", async () => {
+      const [result] = await mockOnMessage.fire({
+        action: "clearCustomRate",
+      });
+      expect(result.ok).toBe(false);
+    });
+  });
+
+  describe("fetch re-merges custom rates", () => {
+    it("re-applies custom rates after fetch", async () => {
+      mockStorage.state.customRates = { USD: 2.85 };
+      parseRates.mockReturnValue({
+        ratesDate: "2026-01-01",
+        rates: {
+          USD: { code: "USD", rate: 2.8186, scale: 1 },
+          EUR: { code: "EUR", rate: 3.1, scale: 1 },
+        },
+      });
+      mockFetch.mockResolvedValue({ ok: true, json: async () => [] });
+
+      const result = await fetchRatesFromNbrb();
+
+      expect(result.rates.USD.rate).toBe(2.85);
+      expect(result.rates.EUR.rate).toBe(3.1);
+      expect(mockStorage.state.ratesData.rates.USD.rate).toBe(2.85);
     });
   });
 });

@@ -151,7 +151,14 @@ export function formatRate(rate) {
   if (!Number.isFinite(rate)) {
     return "-";
   }
-  return rate.toFixed(4);
+  return rate.toFixed(3);
+}
+
+export function formatConverterResult(amount) {
+  if (!Number.isFinite(amount)) {
+    return null;
+  }
+  return `= ${amount.toFixed(2)} BYN`;
 }
 
 export function formatRateLabel(code, scale) {

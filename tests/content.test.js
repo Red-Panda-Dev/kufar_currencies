@@ -511,10 +511,13 @@ describe("content/kufar.js", () => {
             "[data-kufar-original-price-text]",
           ),
         ).find((node) =>
-          (node.dataset.kufarOriginalPriceText || "").startsWith("от "),
+          (node.dataset.kufarOriginalPriceText || "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .startsWith("от "),
         );
         expect(prefixedNode).toBeTruthy();
-        expect(prefixedNode.textContent.startsWith("от ")).toBe(true);
+        expect(prefixedNode.textContent.trim().startsWith("от ")).toBe(true);
       } finally {
         session.cleanup();
       }
@@ -674,10 +677,13 @@ describe("content/kufar.js", () => {
             "[data-kufar-original-price-text]",
           ),
         ).find((node) =>
-          (node.dataset.kufarOriginalPriceText || "").startsWith("от "),
+          (node.dataset.kufarOriginalPriceText || "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .startsWith("от "),
         );
         expect(prefixedNode).toBeTruthy();
-        expect(prefixedNode.textContent.startsWith("от ")).toBe(true);
+        expect(prefixedNode.textContent.trim().startsWith("от ")).toBe(true);
       } finally {
         session.cleanup();
       }

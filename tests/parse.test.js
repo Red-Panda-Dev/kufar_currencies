@@ -8,6 +8,7 @@ import {
   convert,
   convertFromBYN,
   formatDate,
+  formatConverterResult,
   formatDisplayPrice,
   formatRate,
   formatRateLabel,
@@ -136,7 +137,7 @@ describe("price parsing and formatting", () => {
 
   it("formats display and rate labels", () => {
     expect(formatDisplayPrice(1234.5, "USD")).toContain("$");
-    expect(formatRate(2.8186)).toBe("2.8186");
+    expect(formatRate(2.8186)).toBe("2.819");
     expect(formatRateLabel("USD", 1)).toBe("BYN за 1 USD");
     expect(formatRateLabel("RUB", 100)).toBe("BYN за 100 RUB");
   });
@@ -174,5 +175,13 @@ describe("price parsing and formatting", () => {
 
   it("formatRateLabel returns empty for non-target currency", () => {
     expect(formatRateLabel("GBP", 1)).toBe("");
+  });
+
+  it("formatConverterResult formats converter output", () => {
+    expect(formatConverterResult(1234.5)).toBe("= 1234.50 BYN");
+    expect(formatConverterResult(0)).toBe("= 0.00 BYN");
+    expect(formatConverterResult(-5.5)).toBe("= -5.50 BYN");
+    expect(formatConverterResult(NaN)).toBeNull();
+    expect(formatConverterResult(Infinity)).toBeNull();
   });
 });

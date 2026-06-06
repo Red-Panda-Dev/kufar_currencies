@@ -3,7 +3,7 @@ import {
   TARGET_CURRENCIES,
   convert,
   formatDate,
-  formatDisplayPrice,
+  formatConverterResult,
   formatRate,
   formatRateLabel,
   formatTime,
@@ -65,6 +65,7 @@ let selectedCurrency = "USD";
 let converterCurrency = "USD";
 let domainSettings = { ...DEFAULT_DOMAIN_SETTINGS };
 let isLoading = false;
+let customRates = null;
 
 function normalizeCurrency(code) {
   return DISPLAY_CURRENCIES.includes(code) ? code : "USD";
@@ -159,22 +160,36 @@ function createRateRow(code, rateInfo) {
   const flag = document.createElement("span");
   const codeNode = document.createElement("span");
   const value = document.createElement("span");
+  const editBtn = document.createElement("button");
 
-  row.className = "rate-row";
+  const isCustom = customRates && code in customRates;
+  const displayRate = isCustom ? customRates[code] : rateInfo.rate;
+
+  row.className = "rate-row" + (isCustom ? " rate-row--custom" : "");
   flag.className = "rate-row__flag";
   codeNode.className = "rate-row__code";
   value.className = "rate-row__value";
+  editBtn.className = "rate-row__edit";
 
   flag.textContent = CURRENCY_FLAGS[code] || "";
   codeNode.textContent = code;
-  value.textContent = `${formatRate(rateInfo.rate)} ${formatRateLabel(
+  value.textContent = `${formatRate(displayRate)} ${formatRateLabel(
     code,
     rateInfo.scale,
   )}`;
+  editBtn.textContent = "✎";
+  editBtn.type = "button";
+  editBtn.setAttribute("aria-label", `Изменить курс ${code}`);
+  editBtn.dataset.currency = code;
+
+  editBtn.addEventListener("click", () => {
+    enterRateEditMode(row, code, displayRate);
+  });
 
   row.appendChild(flag);
   row.appendChild(codeNode);
   row.appendChild(value);
+  row.appendChild(editBtn);
   return row;
 }
 
@@ -195,6 +210,129 @@ function renderRates() {
   }
 }
 
+function enterRateEditMode(row, code, currentValue) {
+  if (row.classList.contains("rate-row--editing")) {
+    return;
+  }
+
+  row.classList.add("rate-row--editing");
+
+  const input = document.createElement("input");
+  input.className = "rate-row__input";
+  input.type = "number";
+  input.step = "any";
+  input.min = "0.001";
+  input.value = currentValue;
+  input.setAttribute("aria-label", `Новый курс ${code}`);
+
+  const acceptBtn = document.createElement("button");
+  acceptBtn.className = "rate-row__accept";
+  acceptBtn.textContent = "✓";
+  acceptBtn.type = "button";
+  acceptBtn.setAttribute("aria-label", `Сохранить курс ${code}`);
+
+  const dropBtn = document.createElement("button");
+  dropBtn.className = "rate-row__drop";
+  dropBtn.textContent = "✕";
+  dropBtn.type = "button";
+  dropBtn.setAttribute("aria-label", `Отменить изменение курса ${code}`);
+
+  const editBtn = row.querySelector(".rate-row__edit");
+
+  let blurSave = true;
+
+  acceptBtn.addEventListener("mousedown", () => {
+    blurSave = false;
+  });
+  dropBtn.addEventListener("mousedown", () => {
+    blurSave = false;
+  });
+
+  acceptBtn.addEventListener("click", () => {
+    saveCustomRateEdit(code, input.value, row);
+  });
+
+  dropBtn.addEventListener("click", () => {
+    clearCustomRateEdit(code, row);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      blurSave = false;
+      saveCustomRateEdit(code, input.value, row);
+    } else if (e.key === "Escape") {
+      blurSave = false;
+      cancelRateEdit(row);
+    }
+  });
+
+  input.addEventListener("blur", () => {
+    if (blurSave) {
+      cancelRateEdit(row);
+    }
+  });
+
+  row.insertBefore(input, editBtn);
+  row.insertBefore(acceptBtn, editBtn);
+  row.insertBefore(dropBtn, editBtn);
+  input.focus();
+  input.select();
+}
+
+async function saveCustomRateEdit(code, rawValue, row) {
+  const rate = Number.parseFloat(rawValue);
+  if (!Number.isFinite(rate) || rate <= 0) {
+    cancelRateEdit(row);
+    return;
+  }
+  try {
+    const response = await browser.runtime.sendMessage({
+      action: "saveCustomRate",
+      code,
+      rate,
+    });
+    if (response?.ok && response.ratesData) {
+      ratesData = response.ratesData;
+      if (!customRates) customRates = {};
+      customRates[code] = rate;
+    }
+  } catch {
+    // ignore
+  }
+  renderRates();
+  renderConverter();
+}
+
+async function clearCustomRateEdit(code, row) {
+  try {
+    const response = await browser.runtime.sendMessage({
+      action: "clearCustomRate",
+      code,
+    });
+    if (response?.ok && response.ratesData) {
+      ratesData = response.ratesData;
+      if (customRates) delete customRates[code];
+      if (customRates && Object.keys(customRates).length === 0) {
+        customRates = null;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  renderRates();
+  renderConverter();
+}
+
+function cancelRateEdit(row) {
+  row.classList.remove("rate-row--editing");
+  const input = row.querySelector(".rate-row__input");
+  const accept = row.querySelector(".rate-row__accept");
+  const drop = row.querySelector(".rate-row__drop");
+  if (input) input.remove();
+  if (accept) accept.remove();
+  if (drop) drop.remove();
+}
+
 function renderLastUpdated() {
   const node = document.getElementById("lastUpdated");
   if (!ratesData?.fetchedAt) {
@@ -203,7 +341,7 @@ function renderLastUpdated() {
   }
   const dateText = formatDate(ratesData.fetchedAt);
   const timeText = formatTime(ratesData.fetchedAt);
-  node.textContent = `Обновлено: ${dateText}, ${timeText}`;
+  node.textContent = `Обновлено: ${dateText} ${timeText}`;
 }
 
 function renderConverter() {
@@ -217,8 +355,14 @@ function renderConverter() {
   }
 
   const rateInfo = ratesData?.rates?.[converterCurrency];
-  const converted = convert(value, rateInfo);
-  const formatted = formatDisplayPrice(converted, "BYN");
+  if (!rateInfo) {
+    output.textContent = "-";
+    return;
+  }
+  const effectiveRate = customRates?.[converterCurrency] ?? rateInfo.rate;
+  const effectiveRateInfo = { ...rateInfo, rate: effectiveRate };
+  const converted = convert(value, effectiveRateInfo);
+  const formatted = formatConverterResult(converted);
   output.textContent = formatted || "-";
 }
 
@@ -321,6 +465,17 @@ async function readStoredState() {
     !("__all__" in state.domainSettings)
   ) {
     await browser.storage.local.set({ domainSettings });
+  }
+
+  try {
+    const response = await browser.runtime.sendMessage({
+      action: "getCustomRates",
+    });
+    if (response?.ok) {
+      customRates = response.customRates || null;
+    }
+  } catch {
+    // ignore
   }
 }
 
