@@ -17,7 +17,7 @@ popup/
 
 - **ES module with imports from `src/lib/rates.js`.** Unlike content script, popup has full ESM support. Uses `DISPLAY_CURRENCIES`, `TARGET_CURRENCIES`, `convert`, `formatDisplayPrice`, `formatRate`, `formatRateLabel`, `formatDate`, `formatTime`.
 - **Communicates with background via `browser.runtime.sendMessage`.** Actions: `getRates`, `refreshRates`, `ensureRates`. Never fetches NBRB directly.
-- **`DOMAIN_REGISTRY` is a superset** of `src/content/kufar.js`: includes a "Везде" master toggle with `controlsSupportedDomains: true`. Must stay in sync.
+- **`DOMAIN_REGISTRY`** (line 16) is a superset of `src/content/kufar.js:4`: includes a "Везде" master toggle with `controlsSupportedDomains: true`. Must stay in sync.
 - **No `innerHTML`.** Use `textContent`, `createElement`, `appendChild`.
 - **CSS uses custom properties** (`--bg`, `--text`, `--accent`, etc.) with light/dark variants via `prefers-color-scheme`. Never hardcode colors.
 - **Converter uses direct `convert(amount, rateInfo)`** — popup has fresh rates from background, unlike content script which reads stored original amounts.
@@ -27,7 +27,7 @@ popup/
 - **Event handlers via `addEventListener`**, never inline `onclick` in HTML.
 - **Currency/domain changes persist to `browser.storage.local`.** Keys: `selectedCurrency`, `domainSettings`.
 - **`converterInput` uses `inputmode="decimal"` and `type="number"`** — preserve accessibility attributes.
-- **Adding a new domain** requires updating `DOMAIN_REGISTRY` in both `popup/popup.js` and `src/content/kufar.js`, plus HTML fixtures in `examples/`.
+- **Adding a new domain** requires updating `DOMAIN_REGISTRY` in both `popup/popup.js:16` and `src/content/kufar.js:4`, plus HTML fixtures in `examples/`.
 - **Sections use `[hidden]` attribute** for show/hide (loading, error, rates). Don't remove elements from DOM.
 
 ## Validation

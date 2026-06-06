@@ -14,16 +14,16 @@ content/
 ## Local boundaries and invariants
 
 - **Self-contained IIFE only.** No `import`, no `fetch`, no `innerHTML`. Content scripts run in an isolated world without ESM support.
-- **Duplicates from `src/lib/rates.js`.** `parseBynPrice`, `convertFromBYN`, `formatDisplayPrice` are intentionally duplicated. Changes to those functions in `lib/rates.js` must be mirrored here.
-- **`DOMAIN_REGISTRY` must stay in sync with `src/popup/popup.js`.** Same hosts, same `supported` flags.
-- **Only converts inside safe containers** — selectors defined in `applyConversion()` (ad cards, sidebar, main, footer).
+- **Duplicates from `src/lib/rates.js`.** `parseBynPrice` (line 81), `convertFromBYN` (line 132), `formatDisplayPrice` (line 149) are intentionally duplicated. Changes to those functions in `lib/rates.js` must be mirrored here.
+- **`DOMAIN_REGISTRY`** (line 4) must stay in sync with `src/popup/popup.js:16`. Same hosts, same `supported` flags.
+- **Only converts inside safe containers** — selectors defined in `applyConversion()` (line 217).
 - **Only converts leaf text nodes** (elements with `childElementCount === 0`) that pass the BYN marker regex.
 - **`NEGATIVE_LABELS`** filter out "Договорная", "Бесплатно", "Обмен", "Цена не указана".
 - **Always preserves original text** via `data-kufar-original-price-text` and `data-kufar-original-price-amount`. Restores when `selectedCurrency = BYN` or domain is disabled.
 
 ## Safe change rules
 
-- **MutationObserver** must use `scheduleApply` (rAF debounce). Never synchronous recalculation.
+- **MutationObserver** (`setupObserver`, line 313) must use `scheduleApply` (line 262, rAF debounce). Never synchronous recalculation.
 - **No network calls.** Request rates via `browser.runtime.sendMessage({ action: 'ensureRates' })`.
 - **No module imports.** Inline utilities or duplicate from `src/lib/`.
 - **No `innerHTML`.** Use `textContent`, `createElement`, `appendChild`.

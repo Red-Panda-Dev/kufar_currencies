@@ -24,8 +24,9 @@ tests/
 ## Safe change rules
 
 - When adding tests for `src/lib/rates.js`, add them to `parse.test.js`.
+- When adding tests for `src/background.js`, add them to `background.test.js`.
 - When adding tests for content script behavior, add them to `content.test.js`. Use `bootstrapContentScript()` and `createBrowserMock()`.
-- Use real HTML fixtures from `examples/auto/` for content tests, not inline HTML strings.
+- Use real HTML fixtures from `examples/` for content tests, not inline HTML strings.
 - Coverage thresholds require 80% for `src/lib/**/*.js` and `src/background.js`. Content script coverage is not enforced but should be improved when feasible.
 
 ## Validation

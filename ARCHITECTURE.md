@@ -2,22 +2,22 @@
 
 ## 1. High-Level Overview
 
-Kufar Currencies is a Manifest V3 browser extension (Chrome + Firefox) that replaces BYN-denominated prices on Kufar.by classifieds pages with equivalent amounts in a user-chosen currency (USD, EUR, or RUB), using official exchange rates from the National Bank of the Republic of Belarus (NBRB). Observed: `manifest.json:2`, `manifest.json:5`, `manifest.json:7`.
+Kufar Currencies is a Manifest V3 browser extension (Chrome + Firefox) that replaces BYN-denominated prices on Kufar.by classifieds pages with equivalent amounts in a user-chosen currency (USD, EUR, or RUB), using official exchange rates from the National Bank of the Republic of Belarus (NBRB). Users can also override individual rates with custom values. Observed: `manifest.json:2`, `manifest.json:5`, `manifest.json:7`, `src/background.js:5`.
 
 The extension follows a classic WebExtension three-part architecture: a background service worker for network and state, a content script for DOM manipulation, and a popup for user configuration. The architectural paradigm is strict separation of concerns — network access is exclusive to the background script, DOM manipulation is exclusive to the content script, and shared conversion logic lives in a pure library module. Observed: `src/background.js`, `src/content/kufar.js:1`, `src/lib/rates.js`, `src/popup/popup.js`.
 
-A key architectural constraint is that content scripts cannot use ES module imports, so the pure logic from `src/lib/rates.js` is intentionally duplicated inline within the self-contained content script IIFE. Observed: `src/content/kufar.js:61-146` duplicates `parseBynPrice`, `convertFromBYN`, `formatDisplayPrice` from `src/lib/rates.js`. The `DOMAIN_REGISTRY` constant is similarly duplicated between the content script and popup. Observed: `src/content/kufar.js:4`, `src/popup/popup.js:16`.
+A key architectural constraint is that content scripts cannot use ES module imports, so the pure logic from `src/lib/rates.js` is intentionally duplicated inline within the self-contained content script IIFE. Observed: `src/content/kufar.js:81`, `src/content/kufar.js:132`, `src/content/kufar.js:149` duplicate `parseBynPrice`, `convertFromBYN`, `formatDisplayPrice` from `src/lib/rates.js:95`, `src/lib/rates.js:78`, `src/lib/rates.js:138`. The `DOMAIN_REGISTRY` constant is similarly duplicated between the content script and popup. Observed: `src/content/kufar.js:4`, `src/popup/popup.js:16`.
 
-Evidence anchors: `manifest.json`, `src/background.js:1-5`, `src/content/kufar.js:1`, `src/lib/rates.js:1`, `src/popup/popup.js:1-10`, `scripts/build-chrome.mjs`.
+Evidence anchors: `manifest.json`, `src/background.js:1-7`, `src/content/kufar.js:1`, `src/lib/rates.js:1-2`, `src/popup/popup.js:1-10`, `scripts/build-chrome.mjs`.
 
 ## 2. System Architecture (Logical)
 
 Four logical components with strict boundaries:
 
 - **Rates Library** (`src/lib/rates.js`) — Pure, side-effect-free parsing, conversion, and formatting. No browser APIs, no network. Importable by background and popup. Not importable by content script (MV3 limitation).
-- **Background Service Worker** (`src/background.js`) — Owns all network access (NBRB API fetch), caching via `browser.storage.local`, alarm-based periodic refresh, and message handling. Depends on Rates Library. Does not touch the DOM.
+- **Background Service Worker** (`src/background.js`) — Owns all network access (NBRB API fetch), caching via `browser.storage.local`, alarm-based periodic refresh, custom rate management, and message handling. Depends on Rates Library. Does not touch the DOM.
 - **Content Script** (`src/content/kufar.js`) — Self-contained IIFE injected into Kufar pages. Scans DOM for BYN prices, converts and replaces text, uses MutationObserver with rAF debounce. Reads storage directly, requests rates via messaging. Duplicates conversion logic from Rates Library.
-- **Popup UI** (`src/popup/`) — ES module with HTML/CSS/JS. Imports from Rates Library. Communicates with background via `browser.runtime.sendMessage`. Manages currency selection, domain toggles, and a converter widget.
+- **Popup UI** (`src/popup/`) — ES module with HTML/CSS/JS. Imports from Rates Library. Communicates with background via `browser.runtime.sendMessage`. Manages currency selection, domain toggles, custom rate editing, and a converter widget.
 
 Dependency direction:
 
@@ -41,17 +41,18 @@ Key boundaries:
 ```
 manifest.json                  # MV3 manifest (Firefox-primary); Chrome build transforms it
 src/
-├── background.js              # Service worker: fetch, cache, alarms, message handler
+├── background.js              # Service worker: fetch, cache, alarms, custom rates, message handler
 ├── lib/
-│   └── rates.js               # Pure: parseRates, convert, formatDisplayPrice, etc.
+│   └── rates.js               # Pure: parseRates, convert, convertFromBYN, parseBynPrice, formatting
 ├── content/
 │   └── kufar.js               # Self-contained IIFE: DOM scanning, price conversion, observer
 └── popup/
     ├── popup.html             # Popup markup
     ├── popup.css              # Light/dark theme via prefers-color-scheme
-    └── popup.js               # Popup logic: currency/domain controls, converter widget
+    └── popup.js               # Popup logic: currency/domain controls, custom rates, converter
 tests/
 ├── parse.test.js              # Unit tests for lib/rates.js
+├── background.test.js         # Unit tests for background.js (mocked browser APIs)
 └── content.test.js            # JSDOM integration tests for content script
 scripts/
 ├── build-chrome.mjs           # Chrome packaging: strips gecko keys, converts to service_worker
@@ -59,24 +60,26 @@ scripts/
 └── build-utils.mjs            # Shared: createZip, removeAgentsFiles
 examples/
 ├── auto/                      # HTML fixtures from auto.kufar.by
+├── main/                      # HTML fixtures from kufar.by
 ├── real_estate/               # HTML fixtures from re.kufar.by
 ├── travel/                    # HTML fixtures from travel.kufar.by
 └── nbrb_response.json         # Sample NBRB API response fixture
 icons/                         # Extension icons (SVG + PNG)
-vitest.config.js               # Test config; coverage threshold 80% for src/lib/**/*.js
+vitest.config.js               # Test config; coverage threshold 80% for src/lib/**/*.js + src/background.js
 Makefile                       # build = lint + test + package both browsers
 ```
 
 Where is X?
 
-- **NBRB API fetch logic**: `src/background.js:22-56`
+- **NBRB API fetch logic**: `src/background.js:37-77`
+- **Custom rate merge logic**: `src/background.js:22-43`
 - **Rate parsing and conversion math**: `src/lib/rates.js`
-- **DOM price replacement**: `src/content/kufar.js:193-236` (`applyConversion`)
-- **MutationObserver setup**: `src/content/kufar.js:289-306`
+- **DOM price replacement**: `src/content/kufar.js:217` (`applyConversion`)
+- **MutationObserver setup**: `src/content/kufar.js:313`
 - **DOMAIN_REGISTRY (content)**: `src/content/kufar.js:4`
 - **DOMAIN_REGISTRY (popup)**: `src/popup/popup.js:16`
 - **Currency selection persistence**: `browser.storage.local` key `selectedCurrency`
-- **Chrome/Firefox manifest differences**: `scripts/build-chrome.mjs:30-39`
+- **Chrome/Firefox manifest transformation**: `scripts/build-chrome.mjs:24-32`
 
 ## 4. Life of a Request / Primary Data Flow
 
@@ -84,9 +87,10 @@ Where is X?
 
 ```
 browser.alarms "refreshRates" (every 240 min)
-  → src/background.js:83  onAlarm listener
+  → src/background.js:104  onAlarm listener
   → refreshRates()  →  fetchRatesFromNbrb()
   → fetch(NBRB_URL)  →  parseRates(data) from lib/rates.js
+  → mergeCustomRates(ratesData, customRates) from storage
   → browser.storage.local.set({ ratesData, lastError })
 ```
 
@@ -116,13 +120,24 @@ User selects currency in popup
   → applyConversion() re-runs on stored original amounts (never re-converts)
 ```
 
+### Custom rate editing (popup → background)
+
+```
+User edits a rate in popup
+  → popup.js: browser.runtime.sendMessage({ action: "saveCustomRate", code, rate })
+  → background.js: saveCustomRate handler → mergeCustomRates()
+  → browser.storage.local.set({ customRates, ratesData })
+  → storage.onChanged propagates merged ratesData to content script
+  → content script re-converts using updated rates
+```
+
 ### Rate refresh (user-triggered)
 
 ```
 User clicks "Refresh" in popup
   → popup.js: browser.runtime.sendMessage({ action: "refreshRates" })
   → background.js: refreshRates({ force: true })
-  → fetch → parseRates → storage.local.set
+  → fetch → parseRates → mergeCustomRates → storage.local.set
   → storage.onChanged propagates to content script
 ```
 
@@ -138,11 +153,11 @@ User clicks "Refresh" in popup
 
 - **Rule:** `src/lib/rates.js` must have zero browser API dependencies.
   - **Rationale:** Pure testability in plain Node without jsdom or browser mocks.
-  - **Enforcement / Signals (Observed):** No `browser`, `chrome`, `document`, `window`, or `fetch` references in the file. Coverage enforced at 80% thresholds in `vitest.config.js:13-18`.
+  - **Enforcement / Signals (Observed):** No `browser`, `chrome`, `document`, `window`, or `fetch` references in the file. Coverage enforced at 80% thresholds in `vitest.config.js:14-19`.
 
 - **Rule:** Conversion always operates from the original BYN amount, never from an already-converted value.
   - **Rationale:** Re-conversion compounds rounding errors. The content script stores the original amount on first parse.
-  - **Enforcement / Signals (Observed):** `data-kufar-original-price-amount` is set once per node in `src/content/kufar.js:216` and read on subsequent passes; `restoreAll()` reverts to original text.
+  - **Enforcement / Signals (Observed):** `data-kufar-original-price-amount` is set once per node in `src/content/kufar.js:240` and read on subsequent passes; `restoreAll()` reverts to original text.
 
 - **Rule:** `DOMAIN_REGISTRY` must stay in sync between `src/content/kufar.js:4` and `src/popup/popup.js:16`.
   - **Rationale:** Content script checks host activation; popup renders domain toggles. Mismatch causes broken UI or silent skipping.
@@ -154,7 +169,7 @@ User clicks "Refresh" in popup
 
 - **Rule:** MutationObserver must use `scheduleApply` (rAF debounce), never synchronous full recalculation on every mutation.
   - **Rationale:** Synchronous recalculation on high-frequency DOM mutations causes jank and potential infinite loops.
-  - **Enforcement / Signals (Observed):** `src/content/kufar.js:238-252` implements the debounce guard; `observer.observe` callback calls `scheduleApply()` not `applyConversion()` directly.
+  - **Enforcement / Signals (Observed):** `src/content/kufar.js:262-276` implements the debounce guard; `observer.observe` callback at line 321 calls `scheduleApply()` not `applyConversion()` directly.
 
 - **Rule:** No `innerHTML` in production code (`src/content/` and `src/popup/`).
   - **Rationale:** XSS prevention in extension contexts.
@@ -162,11 +177,11 @@ User clicks "Refresh" in popup
 
 - **Rule:** `manifest.json` is Firefox-primary; Chrome build transforms it at package time.
   - **Rationale:** Firefox requires `browser_specific_settings.gecko` and `background.scripts`; Chrome requires `background.service_worker`.
-  - **Enforcement / Signals (Observed):** `scripts/build-chrome.mjs:31-39` deletes `browser_specific_settings` and converts `background.scripts` → `background.service_worker`.
+  - **Enforcement / Signals (Observed):** `scripts/build-chrome.mjs:24-32` deletes `browser_specific_settings` and converts `background.scripts` to `background.service_worker`.
 
 - **Rule:** Build packages must not contain `AGENTS.md` files.
   - **Rationale:** Developer-facing metadata should not ship to users.
-  - **Enforcement / Signals (Observed):** `scripts/build-utils.mjs:8-18` recursively removes `AGENTS.md` files from build output.
+  - **Enforcement / Signals (Observed):** `scripts/build-utils.mjs:15-24` recursively removes `AGENTS.md` files from build output.
 
 ## 6. Documentation Strategy
 
