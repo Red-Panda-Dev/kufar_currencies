@@ -35,14 +35,24 @@ For architecture and data flow, see `ARCHITECTURE.md`. For module boundaries and
 
 ## Visual language
 
-### Colors
+### Colors (Kanagawa Wave Palette)
 
-- Defined as custom properties on `:root` in `src/popup/popup.css:1–19`. Always use variables, never raw hex.
-- Primary palette: `--bg` (#1a1a2e), `--bg-card` (#252542), `--text` (#e5e7eb), `--text-muted` (#9ca3af).
-- Accent: `--accent` (#60a5fa), `--accent-hover` (#93bbfd). Used for interactive highlights, currency codes, focus rings.
-- Semantic: `--error-bg`/`--error-text` for errors, `--warning-bg`/`--warning-text` for stale-data warnings.
-- Custom rates: `--custom-rate` (#fbbf24) — amber, visually distinct from accent blue.
-- Accept/deny buttons use hardcoded green (#16a34a) and red (#dc2626) for clear affordance.
+- Defined as custom properties on `:root` in `src/popup/popup.css:1–20`. Always use variables, never raw hex.
+- Base palette:
+  - `--bg` (#1F1F28) — Sumi Dark (main background)
+  - `--bg-card` (#2A2A37) — Sumi Lighter (card background)
+  - `--text` (#DCD7BA) — Fuji (primary text)
+  - `--text-muted` (#C8C093) — Old White (secondary text)
+  - `--border` (#363646) — Sumi Lightest (borders)
+- Accent palette:
+  - `--accent` (#7E9CD8) — Wave Blue (interactive highlights)
+  - `--accent-hover` (#7FB4CA) — Spring Blue (hover states)
+- Semantic colors:
+  - `--success` (#95C561) — Dragon Green (accept buttons)
+  - `--danger` (#E82424) — Samurai Red (cancel buttons)
+  - `--error-bg` (#2A1E1E) / `--error-text` (#E82424) — Error states
+  - `--warning-bg` (#4A3D2A) / `--warning-text` (#FF9E3B) — Warning states
+  - `--custom-rate` (#FF9E3B) — Ronin Yellow (custom rates)
 
 ### Typography
 
@@ -100,7 +110,7 @@ For architecture and data flow, see `ARCHITECTURE.md`. For module boundaries and
 ### Footer (`src/popup/popup.css:339–377`)
 
 - Flex row: updated timestamp (left, muted 11px) + refresh button (right).
-- Button: card-style, accent-colored text, hover fills accent + white text.
+- Button: card-style, accent-colored text, hover fills accent + Fuji text.
 - Disabled state: `opacity: 0.5`, `cursor: not-allowed`.
 - `transition: background 0.15s, border-color 0.15s, color 0.15s` (disabled via `prefers-reduced-motion`).
 
@@ -119,7 +129,7 @@ For architecture and data flow, see `ARCHITECTURE.md`. For module boundaries and
 - Rates formatted with `formatRate()` + `formatRateLabel()` (scale suffix like "за 100 единиц").
 - Custom rates shown in amber (`--custom-rate`) to distinguish from official rates.
 - Converter result: `formatConverterResult()`, right-aligned, tabular-nums.
-- Last updated: date + time via `formatDate()` / `formatTime()`, format "Обновлено: DD.MM.YYYY HH:MM".
+- Last updated: date + time via `formatDate()` / `formatTime()`, format "Обновлено: DD.MM HH:MM".
 - Empty/missing values display as "—" dash, never empty space.
 - Stale data: status shows "Показаны сохраненные данные" with warning styling.
 
@@ -149,7 +159,7 @@ For architecture and data flow, see `ARCHITECTURE.md`. For module boundaries and
 - All inputs and selects have explicit `aria-label`.
 - Edit buttons have `aria-label` describing action + currency code.
 - 44px minimum touch targets on all interactive elements.
-- Focus state: `border-color: var(--accent)` + `box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.25)`.
+- Focus state: `border-color: var(--accent)` + `box-shadow: 0 0 0 2px rgba(126, 156, 216, 0.25)`.
 - `prefers-reduced-motion` disables transitions.
 - `color-scheme: dark` set on `:root` for native form controls.
 
@@ -157,6 +167,7 @@ For architecture and data flow, see `ARCHITECTURE.md`. For module boundaries and
 
 Do:
 - Use CSS custom properties from `:root` for every color decision.
+- Use **Kanagawa Wave palette** colors for all new UI elements.
 - Follow the BEM naming pattern: `block__element` and `block--modifier`.
 - Build DOM programmatically with `createElement` + `textContent` + `appendChild`.
 - Preserve `[hidden]` show/hide pattern for state changes.
@@ -168,10 +179,10 @@ Don't:
 - Use `innerHTML` anywhere in popup code.
 - Add inline `onclick` or other event handler attributes in HTML.
 - Introduce new colors without adding a custom property to `:root`.
+- Hardcode colors — always reference `--bg`, `--text`, `--accent`, etc.
 - Change the 320px fixed width without updating all three width declarations (`html`, `body`, `.popup`).
 - Add animations beyond simple `transition` on interactive state changes.
 - Use `fetch` or `XMLHttpRequest` in popup — route all network through `browser.runtime.sendMessage`.
-- Hardcode colors — always reference `--bg`, `--text`, `--accent`, etc.
 
 ## When unsure
 
