@@ -129,7 +129,7 @@ For architecture and data flow, see `ARCHITECTURE.md`. For module boundaries and
 - Rates formatted with `formatRate()` + `formatRateLabel()` (scale suffix like "за 100 единиц").
 - Custom rates shown in amber (`--custom-rate`) to distinguish from official rates.
 - Converter result: `formatConverterResult()`, right-aligned, tabular-nums.
-- Last updated: date + time via `formatDate()` / `formatTime()`, format "Обновлено: DD.MM.YYYY HH:MM".
+- Last updated: date + time via `formatDate()` / `formatTime()`, format "Обновлено: DD.MM HH:MM".
 - Empty/missing values display as "—" dash, never empty space.
 - Stale data: status shows "Показаны сохраненные данные" with warning styling.
 
@@ -183,7 +183,6 @@ Don't:
 - Change the 320px fixed width without updating all three width declarations (`html`, `body`, `.popup`).
 - Add animations beyond simple `transition` on interactive state changes.
 - Use `fetch` or `XMLHttpRequest` in popup — route all network through `browser.runtime.sendMessage`.
-- Hardcode colors — always reference `--bg`, `--text`, `--accent`, etc.
 
 ## When unsure
 
