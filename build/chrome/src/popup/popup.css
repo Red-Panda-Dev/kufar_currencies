@@ -1,17 +1,20 @@
 :root {
   color-scheme: dark;
-  --bg: #1a1a2e;
-  --bg-card: #252542;
-  --text: #e5e7eb;
-  --text-muted: #9ca3af;
-  --border: #374151;
-  --accent: #60a5fa;
-  --accent-hover: #93bbfd;
-  --error-bg: #3b1c1c;
-  --error-text: #fca5a5;
-  --warning-bg: #3b2e1c;
-  --warning-text: #fcd34d;
-  --custom-rate: #fbbf24;
+  /* Kanagawa Wave Palette - https://github.com/rebelot/kanagawa.nvim */
+  --bg: #1F1F28;          /* Sumi Dark */
+  --bg-card: #2A2A37;     /* Sumi Lighter */
+  --text: #DCD7BA;        /* Fuji */
+  --text-muted: #C8C093;  /* Old White */
+  --border: #363646;      /* Sumi Lightest */
+  --accent: #7E9CD8;      /* Wave Blue */
+  --accent-hover: #7FB4CA; /* Spring Blue */
+  --success: #95C561;     /* Dragon Green */
+  --danger: #E82424;      /* Samurai Red */
+  --error-bg: #2A1E1E;    /* Dark Red */
+  --error-text: #E82424;  /* Samurai Red */
+  --warning-bg: #4A3D2A;  /* Dark Orange */
+  --warning-text: #FF9E3B;/* Ronin Yellow */
+  --custom-rate: #FF9E3B; /* Ronin Yellow */
   --radius: 8px;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   font-family:
@@ -187,19 +190,19 @@ select {
 }
 
 .rate-row__accept {
-  color: #16a34a;
+  color: var(--success);
 }
 
 .rate-row__accept:hover {
-  background: rgba(22, 163, 74, 0.15);
+  background: rgba(149, 197, 97, 0.15);
 }
 
 .rate-row__drop {
-  color: #dc2626;
+  color: var(--danger);
 }
 
 .rate-row__drop:hover {
-  background: rgba(220, 38, 38, 0.15);
+  background: rgba(232, 36, 36, 0.15);
 }
 
 .converter__title {
@@ -249,7 +252,7 @@ select {
 
 .converter__select:hover {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--text);
   border-color: var(--accent);
 }
 
@@ -262,7 +265,7 @@ select {
 
 .settings__select:hover {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--text);
   border-color: var(--accent);
 }
 
@@ -368,7 +371,7 @@ select {
 .footer__refresh:hover:not(:disabled) {
   border-color: var(--accent);
   background: var(--accent);
-  color: #ffffff;
+  color: var(--text);
 }
 
 .footer__refresh:disabled {
