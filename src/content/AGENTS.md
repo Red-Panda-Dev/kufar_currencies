@@ -18,7 +18,7 @@ content/
 - **`DOMAIN_REGISTRY`** (line 4) must stay in sync with `src/popup/popup.js:16`. Same hosts, same `supported` flags.
 - **Only converts inside safe containers** — selectors defined in `applyConversion()` (line 217).
 - **Only converts leaf text nodes** (elements with `childElementCount === 0`) that pass the BYN marker regex.
-- **`NEGATIVE_LABELS`** filter out "Договорная", "Бесплатно", "Обмен", "Цена не указана".
+- **`NEGATIVE_LABELS`** (line 21) filter out "Договорная", "Бесплатно", "Обмен", "Цена не указана".
 - **Always preserves original text** via `data-kufar-original-price-text` and `data-kufar-original-price-amount`. Restores when `selectedCurrency = BYN` or domain is disabled.
 
 ## Safe change rules
