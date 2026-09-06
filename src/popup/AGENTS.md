@@ -1,12 +1,14 @@
 # AGENTS.md
 
-## Scope
+## Scope and inheritance
 
-`src/popup/` — the extension popup UI opened via browser action. Separate entrypoint with its own HTML/CSS/JS lifecycle and full ESM import support.
+Applies to: `src/popup/` — the extension popup UI opened via browser action. Separate entrypoint with its own HTML/CSS/JS lifecycle and full ESM import support.
+
+Inherits repository-wide guidance from `../../AGENTS.md`. This file defines only local differences for this subtree.
 
 ## What lives here
 
-```
+```text
 popup/
 ├── popup.html    # BEM classes, ARIA attributes, semantic sections
 ├── popup.css     # Light/dark via prefers-color-scheme, custom properties, 320px min-width
@@ -15,7 +17,7 @@ popup/
 
 ## Local boundaries and invariants
 
-- **ES module with imports from `src/lib/rates.js`.** Unlike content script, popup has full ESM support. Uses `DISPLAY_CURRENCIES`, `TARGET_CURRENCIES`, `convert`, `formatDisplayPrice`, `formatRate`, `formatRateLabel`, `formatDate`, `formatTime`.
+- **ES module with imports from `src/lib/rates.js`.** Unlike the content script, popup has full ESM support. Uses `DISPLAY_CURRENCIES`, `TARGET_CURRENCIES`, `convert`, `formatDisplayPrice`, `formatRate`, `formatRateLabel`, `formatDate`, `formatTime`.
 - **Communicates with background via `browser.runtime.sendMessage`.** Actions: `getRates`, `refreshRates`, `ensureRates`. Never fetches NBRB directly.
 - **`DOMAIN_REGISTRY`** (line 16) is a superset of `src/content/kufar.js:4`: includes a "Везде" master toggle with `controlsSupportedDomains: true`. Must stay in sync.
 - **No `innerHTML`.** Use `textContent`, `createElement`, `appendChild`.

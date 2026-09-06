@@ -30,7 +30,7 @@ examples/
 ├── real_estate/               # HTML fixtures from re.kufar.by
 ├── travel/                    # HTML fixtures from travel.kufar.by
 ├── main/                      # HTML fixtures from kufar.by
-├── nbrb_response.json         # Sample NBRB API response fixture
+├── nbrb_response.json         # Sample NBRB API response fixture (used by parse.test.js)
 └── screenshots/               # Extension screenshots
 icons/                         # Extension icons (SVG + PNG)
 manifest.json                  # Extension manifest (MV3, Firefox primary)
@@ -50,7 +50,7 @@ Makefile                       # build = lint + test + package both browsers
 ## Where to change
 
 | Concern | Location |
-|---|---|
+| --- | --- |
 | Rates parsing, conversion, formatting | `src/lib/rates.js` |
 | Network, caching, alarms, messages | `src/background.js` |
 | DOM scanning and price replacement | `src/content/kufar.js` |
@@ -58,6 +58,17 @@ Makefile                       # build = lint + test + package both browsers
 | Test coverage | `tests/` |
 | Chrome/Firefox build packaging | `scripts/` |
 | Domain registry (content + popup) | `src/content/kufar.js:4` and `src/popup/popup.js:16` (kept in sync manually) |
+
+## Context routing
+
+Read only when relevant:
+
+- Cross-module changes, data flows, or invariant rationale → `ARCHITECTURE.md`
+- Install/manual-browser-test flows, dev commands → `README.md`
+- Editing the content script → `src/content/AGENTS.md` (IIFE discipline, duplicated helpers, DOM safety)
+- Editing the popup → `src/popup/AGENTS.md` (ESM imports, storage keys, UI conventions)
+- Adding or changing tests → `tests/AGENTS.md` (test-file mapping, fixtures, eval-not-import)
+- Preparing release notes/changelog → `.agents/skills/release-notes/SKILL.md`
 
 ## Change rules
 
@@ -83,19 +94,12 @@ make build-firefox                      # lint + test + package Firefox only
 
 Coverage thresholds: 80% lines/functions/branches/statements for `src/lib/**/*.js` and `src/background.js` (see `vitest.config.js`).
 
-## Key docs
-
-- `README.md` — user-facing overview, dev commands
-- `ARCHITECTURE.md` — component diagram, data flow, invariants with evidence anchors
-- `src/content/AGENTS.md` — content script local rules (IIFE, DOM scanning, duplication)
-- `tests/AGENTS.md` — test file split, fixture usage, coverage boundaries
-- `src/popup/AGENTS.md` — popup-specific conventions (DOMAIN_REGISTRY, CSS, converter)
+No CI workflows are configured — validation is local (`make build` = lint + test + package).
 
 ## Repository-specific gotchas
 
-- `src/content/kufar.js` duplicates `parseBynPrice` (line 81), `convertFromBYN` (line 132), `formatDisplayPrice` (line 149) from `src/lib/rates.js`. Keep these in sync.
+- `src/content/kufar.js` intentionally duplicates `parseBynPrice`, `convertFromBYN`, `formatDisplayPrice` from `src/lib/rates.js`; no automated sync check exists. See `src/content/AGENTS.md` for the local sync checklist.
 - `DOMAIN_REGISTRY` exists in two files (`src/content/kufar.js:4` and `src/popup/popup.js:16`). Changes must be applied to both.
-- `NEGATIVE_LABELS` in content script ("Договорная", "Бесплатно", "Обмен", "Цена не указана") prevent conversion of non-price text that coincidentally matches BYN patterns.
 - `globalThis.browser ??= globalThis.chrome` shim appears in `src/background.js:3`, `src/content/kufar.js:2`, and `src/popup/popup.js:12` for Chrome compatibility.
 - `manifest.json` is Firefox-primary. Chrome build transforms it at build time (strips `browser_specific_settings`, converts `background.scripts` → `background.service_worker`).
 - Build scripts strip `AGENTS.md` files from release packages (`removeAgentsFiles` in `scripts/build-utils.mjs`).

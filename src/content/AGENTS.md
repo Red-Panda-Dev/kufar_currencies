@@ -1,12 +1,14 @@
 # AGENTS.md
 
-## Scope
+## Scope and inheritance
 
-`src/content/` — the content script injected into Kufar pages by the extension manifest.
+Applies to: `src/content/` — the content script injected into Kufar pages by the extension manifest.
+
+Inherits repository-wide guidance from `../../AGENTS.md`. This file defines only local differences for this subtree.
 
 ## What lives here
 
-```
+```text
 content/
 └── kufar.js   # Self-contained IIFE — DOM scanning, price conversion, MutationObserver
 ```
@@ -35,4 +37,4 @@ content/
 npx vitest run tests/content.test.js
 ```
 
-Tests use `examples/auto/index_page.html` as fixture and mock `browser` storage/messaging via JSDOM.
+Tests use real HTML fixtures from `examples/` and mock `browser` storage/messaging via JSDOM.
