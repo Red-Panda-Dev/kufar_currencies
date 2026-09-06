@@ -48,15 +48,17 @@ function createEventEmitter() {
 const mockFetch = vi.fn();
 const mockStorage = createStorageMock();
 const mockOnInstalled = createEventEmitter();
+const mockOnStartup = createEventEmitter();
 const mockOnAlarm = createEventEmitter();
 const mockOnMessage = createEventEmitter();
-const mockAlarms = { create: vi.fn(), onAlarm: mockOnAlarm };
+const mockAlarms = { create: vi.fn(), get: vi.fn(), onAlarm: mockOnAlarm };
 
 const browserMock = {
   storage: mockStorage.storage,
   alarms: mockAlarms,
   runtime: {
     onInstalled: mockOnInstalled,
+    onStartup: mockOnStartup,
     onAlarm: mockOnAlarm,
     onMessage: mockOnMessage,
   },
@@ -75,6 +77,7 @@ const {
   NBRB_URL,
   REFRESH_MINUTES,
   FETCH_TIMEOUT_MS,
+  ALARM_NAME,
 } = await import("../src/background.js");
 
 beforeEach(() => {
@@ -440,6 +443,7 @@ describe("background.js", () => {
       expect(NBRB_URL).toBe("https://api.nbrb.by/exrates/rates?periodicity=0");
       expect(REFRESH_MINUTES).toBe(240);
       expect(FETCH_TIMEOUT_MS).toBe(15000);
+      expect(ALARM_NAME).toBe("refreshRates");
     });
   });
 

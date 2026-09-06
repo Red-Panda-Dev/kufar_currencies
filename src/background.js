@@ -5,6 +5,7 @@ globalThis.browser ??= globalThis.chrome;
 export const NBRB_URL = "https://api.nbrb.by/exrates/rates?periodicity=0";
 export const REFRESH_MINUTES = 240;
 export const FETCH_TIMEOUT_MS = 15000;
+export const ALARM_NAME = "refreshRates";
 
 let fetchInProgress = null;
 
@@ -88,6 +89,15 @@ export async function refreshRates({ force = false } = {}) {
   return fetchInProgress;
 }
 
+async function ensureAlarm() {
+  const alarm = await browser.alarms.get(ALARM_NAME);
+  if (!alarm) {
+    browser.alarms.create(ALARM_NAME, {
+      periodInMinutes: REFRESH_MINUTES,
+    });
+  }
+}
+
 export async function ensureRates() {
   const { ratesData } = await browser.storage.local.get(["ratesData"]);
   if (ratesData) {
@@ -96,13 +106,18 @@ export async function ensureRates() {
   return refreshRates();
 }
 
-browser.runtime.onInstalled.addListener(() => {
-  browser.alarms.create("refreshRates", { periodInMinutes: REFRESH_MINUTES });
-  refreshRates().catch(() => {});
+browser.runtime.onInstalled.addListener(async () => {
+  await ensureAlarm();
+  await refreshRates().catch(() => {});
+});
+
+browser.runtime.onStartup.addListener(async () => {
+  await ensureAlarm();
+  await refreshRates().catch(() => {});
 });
 
 browser.alarms.onAlarm.addListener((alarm) => {
-  if (alarm?.name !== "refreshRates") {
+  if (alarm?.name !== ALARM_NAME) {
     return;
   }
   refreshRates().catch(() => {});
@@ -174,3 +189,5 @@ browser.runtime.onMessage.addListener((message) => {
 
   return undefined;
 });
+
+ensureAlarm().catch(() => {});
